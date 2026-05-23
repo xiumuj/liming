@@ -18,9 +18,19 @@ canvas{display:block}
 #topBar button:hover{background:rgba(255,255,255,.16)}
 #topBar button.active{background:rgba(249,212,35,.22);border-color:#f9d423}
 #topBar .sv{font-size:13px;color:#f9d423;min-width:28px;text-align:center}
-#cityPanel{position:fixed;left:16px;bottom:16px;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px 16px;min-width:200px;z-index:10;pointer-events:auto}
-#cityPanel .pt{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:8px;letter-spacing:.5px}
-.ci{display:flex;align-items:center;gap:10px;padding:5px 4px;font-size:13px;border-radius:4px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .15s}
+#cityPanel{position:fixed;left:16px;bottom:16px;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px 16px;min-width:200px;max-height:75vh;overflow-y:auto;z-index:10;pointer-events:auto}
+#cityPanel .pt{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:8px;letter-spacing:.5px;cursor:pointer}
+#cityPanel .pt:hover{color:rgba(255,255,255,.65)}
+.city-search{width:100%;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;font-size:12px;outline:none;font-family:inherit;margin-bottom:6px}
+.city-search::placeholder{color:rgba(255,255,255,.3)}
+.city-search:focus{border-color:#f9d423}
+#citySearchResult{margin-bottom:4px}
+.city-sr{display:flex;align-items:center;justify-content:space-between;padding:4px 6px;font-size:12px;color:rgba(255,255,255,.5);border-radius:4px;transition:background .15s}
+.city-sr:hover{background:rgba(255,255,255,.07)}
+.city-sr button{background:rgba(249,212,35,.15);border:1px solid rgba(249,212,35,.3);color:#f9d423;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;white-space:nowrap}
+.city-sr button:hover{background:rgba(249,212,35,.25)}
+.city-sr small{color:rgba(255,255,255,.3);font-size:10px}
+.ci{display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:13px;border-radius:4px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .15s}
 .ci:last-child{border-bottom:none}
 .ci:hover{background:rgba(255,255,255,.07)}
 .ci:active{background:rgba(249,212,35,.12)}
@@ -29,8 +39,12 @@ canvas{display:block}
 .cd.night{background:#1a1a3e;border-color:rgba(255,255,255,.1)}
 .cd.dawn{background:#ff6b35;box-shadow:0 0 10px rgba(255,107,53,.7)}
 .cd.dusk{background:#e74c3c;box-shadow:0 0 6px rgba(231,76,60,.4)}
-.cn{min-width:52px}
-.cs{font-size:11px;color:rgba(255,255,255,.45);margin-left:auto;white-space:nowrap}
+.cn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs{font-size:11px;color:rgba(255,255,255,.45);white-space:nowrap;flex-shrink:0}
+.ci-btn{background:none;border:none;color:rgba(255,255,255,.25);cursor:pointer;padding:2px 3px;font-size:13px;line-height:1;border-radius:3px;flex-shrink:0;transition:.15s}
+.ci-btn:hover{color:#fff;background:rgba(255,255,255,.08)}
+.ci-btn.del:hover{color:#ff4e50;background:rgba(255,78,80,.12)}
+.ci-btn.off{opacity:.35}
 #infoBox{position:fixed;right:16px;bottom:16px;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px 16px;max-width:230px;z-index:10;font-size:12px;line-height:1.7;color:rgba(255,255,255,.65);pointer-events:auto}
 #infoBox strong{color:rgba(255,255,255,.9)}
 #infoBox .hl{color:#f9d423}
@@ -89,8 +103,12 @@ canvas{display:block}
 </div>
 
 <div id="cityPanel">
-  <div class="pt">📍 城市日照 · 点击聚焦</div>
-  <div id="cityList"></div>
+  <div class="pt" id="cpToggle">📍 城市 · 点击展开 <span style="float:right">▶</span></div>
+  <div id="cpBody" style="display:none">
+    <input class="city-search" id="citySearch" placeholder="搜索城市添加…" autocomplete="off">
+    <div id="citySearchResult"></div>
+    <div id="cityList"></div>
+  </div>
 </div>
 
 <div id="infoBox">
@@ -129,13 +147,86 @@ try {
 setLoad('初始化场景…');
 
 // ── Config ─────────────────────────────────────────────────
-const CITIES = [
-  {name:'东京', lat:35.7, lng:139.7, country:'日本'},
+const INITIAL_CITIES = [
   {name:'北京', lat:39.9, lng:116.4, country:'中国'},
   {name:'上海', lat:31.2, lng:121.5, country:'中国'},
+  {name:'乌鲁木齐', lat:43.8, lng:87.6, country:'中国'},
+  {name:'东京', lat:35.7, lng:139.7, country:'日本'},
   {name:'悉尼', lat:-33.9, lng:151.2, country:'澳大利亚'},
   {name:'伦敦', lat:51.5, lng:-0.1,  country:'英国'},
   {name:'纽约', lat:40.7, lng:-74.0, country:'美国'},
+];
+
+const CITY_DB = [
+  {name:'北京', lat:39.9, lng:116.4, country:'中国'},
+  {name:'上海', lat:31.2, lng:121.5, country:'中国'},
+  {name:'广州', lat:23.1, lng:113.3, country:'中国'},
+  {name:'乌鲁木齐', lat:43.8, lng:87.6, country:'中国'},
+  {name:'深圳', lat:22.5, lng:114.1, country:'中国'},
+  {name:'成都', lat:30.6, lng:104.1, country:'中国'},
+  {name:'杭州', lat:30.3, lng:120.2, country:'中国'},
+  {name:'武汉', lat:30.6, lng:114.3, country:'中国'},
+  {name:'西安', lat:34.3, lng:108.9, country:'中国'},
+  {name:'重庆', lat:29.6, lng:106.5, country:'中国'},
+  {name:'哈尔滨', lat:45.8, lng:126.5, country:'中国'},
+  {name:'昆明', lat:25.0, lng:102.7, country:'中国'},
+  {name:'拉萨', lat:29.7, lng:91.1, country:'中国'},
+  {name:'香港', lat:22.3, lng:114.2, country:'中国'},
+  {name:'台北', lat:25.0, lng:121.5, country:'中国台湾'},
+  {name:'天津', lat:39.1, lng:117.2, country:'中国'},
+  {name:'石家庄', lat:38.0, lng:114.5, country:'中国'},
+  {name:'太原', lat:37.9, lng:112.5, country:'中国'},
+  {name:'呼和浩特', lat:40.8, lng:111.7, country:'中国'},
+  {name:'沈阳', lat:41.8, lng:123.4, country:'中国'},
+  {name:'长春', lat:43.9, lng:125.3, country:'中国'},
+  {name:'南京', lat:32.1, lng:118.8, country:'中国'},
+  {name:'合肥', lat:31.8, lng:117.3, country:'中国'},
+  {name:'福州', lat:26.1, lng:119.3, country:'中国'},
+  {name:'南昌', lat:28.7, lng:115.9, country:'中国'},
+  {name:'济南', lat:36.7, lng:117.0, country:'中国'},
+  {name:'郑州', lat:34.8, lng:113.7, country:'中国'},
+  {name:'长沙', lat:28.2, lng:112.9, country:'中国'},
+  {name:'南宁', lat:22.8, lng:108.4, country:'中国'},
+  {name:'海口', lat:20.0, lng:110.3, country:'中国'},
+  {name:'贵阳', lat:26.7, lng:106.6, country:'中国'},
+  {name:'兰州', lat:36.0, lng:103.8, country:'中国'},
+  {name:'西宁', lat:36.6, lng:101.8, country:'中国'},
+  {name:'银川', lat:38.5, lng:106.3, country:'中国'},
+  {name:'澳门', lat:22.2, lng:113.6, country:'中国'},
+  {name:'东京', lat:35.7, lng:139.7, country:'日本'},
+  {name:'大阪', lat:34.7, lng:135.5, country:'日本'},
+  {name:'首尔', lat:37.6, lng:127.0, country:'韩国'},
+  {name:'曼谷', lat:13.8, lng:100.5, country:'泰国'},
+  {name:'新加坡', lat:1.3, lng:103.8, country:'新加坡'},
+  {name:'孟买', lat:19.1, lng:72.9, country:'印度'},
+  {name:'德里', lat:28.6, lng:77.2, country:'印度'},
+  {name:'雅加达', lat:-6.2, lng:106.8, country:'印度尼西亚'},
+  {name:'迪拜', lat:25.2, lng:55.3, country:'阿联酋'},
+  {name:'伊斯坦布尔', lat:41.0, lng:28.9, country:'土耳其'},
+  {name:'伦敦', lat:51.5, lng:-0.1, country:'英国'},
+  {name:'巴黎', lat:48.9, lng:2.3, country:'法国'},
+  {name:'柏林', lat:52.5, lng:13.4, country:'德国'},
+  {name:'罗马', lat:41.9, lng:12.5, country:'意大利'},
+  {name:'莫斯科', lat:55.8, lng:37.6, country:'俄罗斯'},
+  {name:'马德里', lat:40.4, lng:-3.7, country:'西班牙'},
+  {name:'阿姆斯特丹', lat:52.4, lng:4.9, country:'荷兰'},
+  {name:'斯德哥尔摩', lat:59.3, lng:18.1, country:'瑞典'},
+  {name:'雅典', lat:38.0, lng:23.7, country:'希腊'},
+  {name:'纽约', lat:40.7, lng:-74.0, country:'美国'},
+  {name:'洛杉矶', lat:34.1, lng:-118.2, country:'美国'},
+  {name:'芝加哥', lat:41.9, lng:-87.6, country:'美国'},
+  {name:'旧金山', lat:37.8, lng:-122.4, country:'美国'},
+  {name:'多伦多', lat:43.7, lng:-79.4, country:'加拿大'},
+  {name:'墨西哥城', lat:19.4, lng:-99.1, country:'墨西哥'},
+  {name:'圣保罗', lat:-23.5, lng:-46.6, country:'巴西'},
+  {name:'布宜诺斯艾利斯', lat:-34.6, lng:-58.4, country:'阿根廷'},
+  {name:'悉尼', lat:-33.9, lng:151.2, country:'澳大利亚'},
+  {name:'墨尔本', lat:-37.8, lng:145.0, country:'澳大利亚'},
+  {name:'奥克兰', lat:-36.8, lng:174.8, country:'新西兰'},
+  {name:'开普敦', lat:-33.9, lng:18.4, country:'南非'},
+  {name:'开罗', lat:30.0, lng:31.2, country:'埃及'},
+  {name:'拉各斯', lat:6.5, lng:3.4, country:'尼日利亚'},
+  {name:'内罗毕', lat:-1.3, lng:36.8, country:'肯尼亚'},
 ];
 const ER = 1.8, SUN_D = 8, TILT = 23.44 * Math.PI / 180;
 const SUN_POS = new THREE.Vector3(7.34, 2.93, -1.27); // 夏至太阳位置（北极圈极昼）
@@ -401,24 +492,29 @@ try {
   const DOT_R = 0.035;
   const cityListEl = document.getElementById('cityList');
 
-  CITIES.forEach((city, i) => {
-    const pos = ll2p(city.lat, city.lng, ER);
+  // ── Dynamic city management ────────────────────────────────
+  let cityIdCounter = 0;
+  function nextCityId() { return ++cityIdCounter; }
+
+  function addCityToScene(data) {
+    if (cityData.some(d => d.city.name === data.name && d.city.country === data.country)) return;
+    const id = nextCityId();
+    const pos = ll2p(data.lat, data.lng, ER);
 
     const dot = new THREE.Mesh(
       new THREE.SphereGeometry(DOT_R, 12, 12),
       new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true })
     );
-    dot.position.copy(pos); dot.userData = { isCity:true, idx:i };
+    dot.position.copy(pos); dot.userData = { isCity:true, id };
     spinGroup.add(dot); cityClick.push(dot);
 
-    // Label canvas
     const lc = document.createElement('canvas'); lc.width=300; lc.height=72;
     const lx = lc.getContext('2d');
     lx.shadowColor='rgba(0,0,0,0.9)'; lx.shadowBlur=10;
     lx.fillStyle='#fff'; lx.font='bold 28px "Microsoft YaHei","PingFang SC",sans-serif';
-    lx.textAlign='center'; lx.textBaseline='middle'; lx.fillText(city.name, 150, 30);
+    lx.textAlign='center'; lx.textBaseline='middle'; lx.fillText(data.name, 150, 30);
     lx.shadowBlur=4; lx.fillStyle='rgba(255,255,255,0.4)';
-    lx.font='14px sans-serif'; lx.fillText(city.country, 150, 58);
+    lx.font='14px sans-serif'; lx.fillText(data.country, 150, 58);
 
     const lbl = new THREE.Sprite(new THREE.SpriteMaterial({
       map: new THREE.CanvasTexture(lc), transparent:true, depthWrite:false, opacity:0.9
@@ -426,29 +522,120 @@ try {
     lbl.position.copy(pos.clone().multiplyScalar(1.24));
     lbl.scale.set(0.7, 0.168, 1); spinGroup.add(lbl);
 
-    cityData.push({
-      pos, dot, lbl, lm: lbl.material, dm: dot.material,
-      city, index: i, _st: 'night'
-    });
+    const entry = {
+      id, pos, dot, lbl, lm: lbl.material, dm: dot.material,
+      city: { name: data.name, lat: data.lat, lng: data.lng, country: data.country },
+      visible: true, _st: 'night'
+    };
+    cityData.push(entry);
 
-    const item = document.createElement('div'); item.className='ci'; item.id=`ci-${i}`;
-    item.innerHTML = `<span class="cd" id="cd-${i}"></span><span class="cn">${city.name}</span><span class="cs" id="cs-${i}">—</span>`;
-    item.addEventListener('click', () => focusCity(i));
+    const item = document.createElement('div'); item.className='ci'; item.id=`ci-${id}`;
+    item.innerHTML = `
+      <span class="cd" id="cd-${id}"></span>
+      <span class="cn">${data.name}</span>
+      <span class="cs" id="cs-${id}">—</span>
+      <button class="ci-btn" id="ct-${id}" title="显示/隐藏">👁</button>
+      <button class="ci-btn del" id="cdel-${id}" title="删除">✕</button>`;
+    item.addEventListener('click', e => {
+      const t = e.target;
+      if (t.classList.contains('ci-btn')) return;
+      focusCityById(id);
+    });
     cityListEl.appendChild(item);
+
+    document.getElementById(`ct-${id}`).addEventListener('click', e => { e.stopPropagation(); toggleCityVisibility(id); });
+    document.getElementById(`cdel-${id}`).addEventListener('click', e => { e.stopPropagation(); removeCityById(id); });
+    return id;
+  }
+
+  function removeCityById(id) {
+    const idx = cityData.findIndex(d => d.id === id);
+    if (idx < 0) return;
+    const d = cityData[idx];
+    spinGroup.remove(d.dot); spinGroup.remove(d.lbl);
+    d.dot.geometry.dispose(); d.dot.material.dispose();
+    d.lbl.material.map && d.lbl.material.map.dispose();
+    d.lbl.material.dispose();
+    const ci = cityClick.indexOf(d.dot);
+    if (ci >= 0) cityClick.splice(ci, 1);
+    cityData.splice(idx, 1);
+    const item = document.getElementById(`ci-${id}`);
+    if (item) item.remove();
+  }
+
+  function toggleCityVisibility(id) {
+    const d = cityData.find(c => c.id === id);
+    if (!d) return;
+    d.visible = !d.visible;
+    document.getElementById(`ct-${id}`)?.classList.toggle('off', !d.visible);
+  }
+
+  // Add initial preset cities (hidden by default)
+  INITIAL_CITIES.forEach(c => {
+    const id = addCityToScene(c);
+    // Start hidden
+    const d = cityData.find(x => x.id === id);
+    if (d) { d.visible = false; document.getElementById(`ct-${id}`)?.classList.add('off'); }
   });
+
+  // ── City panel toggle ──────────────────────────────────────
+  let masterVisible = false;
+  document.getElementById('cpToggle').addEventListener('click', function() {
+    masterVisible = !masterVisible;
+    document.getElementById('cpBody').style.display = masterVisible ? 'block' : 'none';
+    cityData.forEach(d => {
+      d.visible = masterVisible;
+      document.getElementById(`ct-${d.id}`)?.classList.toggle('off', !masterVisible);
+    });
+    this.innerHTML = masterVisible ?
+      '📍 城市 · 搜索添加 <span style="float:right">▼</span>' :
+      '📍 城市 · 点击展开 <span style="float:right">▶</span>';
+  });
+
+  // ── City search ────────────────────────────────────────────
+  const citySearchEl = document.getElementById('citySearch');
+  const citySearchResultEl = document.getElementById('citySearchResult');
+  let searchTimer = null;
+  citySearchEl.addEventListener('input', function() {
+    clearTimeout(searchTimer);
+    const q = this.value.trim();
+    if (q.length < 1) { citySearchResultEl.innerHTML = ''; return; }
+    searchTimer = setTimeout(() => {
+      const ql = q.toLowerCase();
+      const matches = CITY_DB.filter(c => c.name.toLowerCase().includes(ql) || c.country.toLowerCase().includes(ql)).slice(0, 8);
+      const addedNames = new Set(cityData.map(d => d.city.name));
+      citySearchResultEl.innerHTML = matches.map(c => {
+        const already = addedNames.has(c.name);
+        return `<div class="city-sr"><span>${c.name} <small>${c.country}</small></span>${
+          already ? '<span style="color:rgba(255,255,255,.2);font-size:11px">已添加</span>' :
+          `<button data-name="${c.name}" data-lat="${c.lat}" data-lng="${c.lng}" data-country="${c.country}">+ 添加</button>`
+        }</div>`;
+      }).join('');
+      citySearchResultEl.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', function() {
+          addCityToScene({ name: this.dataset.name, lat: +this.dataset.lat, lng: +this.dataset.lng, country: this.dataset.country });
+          citySearchEl.value = '';
+          citySearchResultEl.innerHTML = '';
+          citySearchEl.focus();
+        });
+      });
+    }, 200);
+  });
+
   document.getElementById('npBtn').addEventListener('click', () => focusPole(true));
   document.getElementById('spBtn').addEventListener('click', () => focusPole(false));
 
   // ── Focus city ─────────────────────────────────────────────
-  function focusCity(idx) {
-    if (!cityData[idx]) return;
+  function focusCityById(id) {
+    const d = cityData.find(c => c.id === id);
+    if (!d) return;
     const wp = new THREE.Vector3();
-    cityData[idx].dot.getWorldPosition(wp);
+    d.dot.getWorldPosition(wp);
     const dir = wp.clone().normalize();
     const tp = dir.clone().multiplyScalar(4);
     const sp = camera.position.clone(), st = controls.target.clone();
     document.querySelectorAll('.ci').forEach(el => el.style.background = '');
-    const item = document.getElementById(`ci-${idx}`);
+    const item = document.getElementById(`ci-${id}`);
     if (item) item.style.background = 'rgba(249,212,35,0.12)';
     const dur = 800, start = performance.now();
     (function anim(t) {
@@ -496,9 +683,9 @@ try {
       const wp = new THREE.Vector3();
       dot.getWorldPosition(wp);
       const d = ray.distanceSqToPoint(wp);
-      if (d < 0.008 && d < best) { best = d; bi = dot.userData.idx; }
+      if (d < 0.008 && d < best) { best = d; bi = dot.userData.id; }
     });
-    if (bi >= 0) focusCity(bi);
+    if (bi >= 0) focusCityById(bi);
   });
 
   // ── Status computation ────────────────────────────────────
@@ -526,8 +713,9 @@ try {
     scene.updateMatrixWorld(true);
     const sd = uniforms.sunDir.value;
     cityData.forEach(d => {
+      if (!d.visible) return;
       const st = compStatus(sd, d); d._st = st;
-      const de = document.getElementById(`cd-${d.index}`);
+      const de = document.getElementById(`cd-${d.id}`);
       if (de) de.className = `cd ${st}`;
 
       const iq = new THREE.Quaternion();
@@ -538,7 +726,7 @@ try {
       const lh = (12 + diff/15 + 24) % 24;
       const hh = Math.floor(lh), mm = Math.floor((lh-hh)*60);
       const ts = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
-      const span = document.getElementById(`cs-${d.index}`);
+      const span = document.getElementById(`cs-${d.id}`);
       if (span) {
         const lbl = { day:'☀白天', night:'🌙夜晚', dawn:'🌅黎明', dusk:'🌇黄昏' };
         span.innerHTML = `${lbl[st]||'—'} <span style="opacity:0.35;font-size:10px">${ts}</span>`;
@@ -597,11 +785,15 @@ try {
     }
 
     cityData.forEach(d => {
+      if (!d.visible) {
+        d.dm.opacity = 0; d.dot.scale.setScalar(0);
+        d.lm.opacity = 0; return;
+      }
       if (d._st === 'dawn') {
-        const p = 0.5 + 0.5 * Math.sin(t*3 + d.index*1.5);
+        const p = 0.5 + 0.5 * Math.sin(t*3 + d.id*0.7);
         d.dm.opacity = p; d.dot.scale.setScalar(0.7 + 0.3*p);
       } else if (d._st === 'dusk') {
-        const p = 0.4 + 0.3 * Math.sin(t*2 + d.index*2);
+        const p = 0.4 + 0.3 * Math.sin(t*2 + d.id*1.3);
         d.dm.opacity = p; d.dot.scale.setScalar(1);
       } else if (d._st === 'day') {
         d.dm.opacity = 1; d.dot.scale.setScalar(1);
