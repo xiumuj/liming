@@ -94,11 +94,7 @@ canvas{display:block}
 </div>
 
 <div id="infoBox">
-  <div><strong>操作提示</strong></div>
-  <div>🖱 拖拽 · 滚轮缩放 · 点击城市</div>
-  <div style="margin-top:6px">地球自<span class="hl">西</span>向<span class="hl">东</span>转动 → 太阳东升西落<br><span class="hl">黎明</span>从东方开始</div>
-  <div style="margin-top:6px;font-size:11px;color:rgba(255,255,255,.35)">●白天 ●夜晚 ●黎明 ●黄昏</div>
-  <div style="margin-top:4px;font-size:11px">夏至日 · 北极圈极昼 ☀️</div>
+  本模型不代表天体大小和距离的实际比例关系
 </div>
 
 <script type="importmap">
@@ -225,7 +221,7 @@ try {
   scene = new THREE.Scene();
 
   camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.set(0.7, 0.8, 5.9);
+  camera.position.set(0, 0.5, 5.9);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -242,23 +238,30 @@ try {
   controls.minDistance = 2.6; controls.maxDistance = 14;
   controls.target.set(0, 0, 0); controls.update();
 
-  // ── Sun (full-coverage canvas texture, never shows bare color) ──
+  // ── Sun ──
   function makeSunTex() {
     const c = document.createElement('canvas'); c.width = 512; c.height = 512;
     const x = c.getContext('2d');
-    const g = x.createRadialGradient(256,256,24, 256,256,256);
-    g.addColorStop(0, '#fff8e0');
-    g.addColorStop(0.30, '#ffcc33');
-    g.addColorStop(0.55, '#ff8800');
-    g.addColorStop(0.78, '#dd5500');
-    g.addColorStop(1, '#331100');
+    const g = x.createRadialGradient(256,256,40, 256,256,256);
+    g.addColorStop(0, 'rgba(255,252,240,1)');
+    g.addColorStop(0.25, 'rgba(255,220,100,1)');
+    g.addColorStop(0.45, 'rgba(255,180,50,1)');
+    g.addColorStop(0.65, 'rgba(255,120,20,1)');
+    g.addColorStop(0.80, 'rgba(200,80,10,0.6)');
+    g.addColorStop(0.90, 'rgba(150,50,5,0.2)');
+    g.addColorStop(0.95, 'rgba(80,30,0,0.05)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
     x.fillStyle = g; x.fillRect(0,0,512,512);
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
     return t;
   }
-  const sunMat = new THREE.MeshBasicMaterial({ map: makeSunTex() });
-  const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 24), sunMat);
+  const sunMat = new THREE.MeshBasicMaterial({ 
+    map: makeSunTex(), 
+    transparent: true, 
+    depthWrite: false 
+  });
+  const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 64, 48), sunMat);
   sunMesh.position.copy(SUN_POS); scene.add(sunMesh);
 
   // Sun glow canvas
@@ -301,6 +304,7 @@ try {
   // ── Earth ──────────────────────────────────────────────────
   axisGroup = new THREE.Group(); axisGroup.rotation.x = TILT; scene.add(axisGroup);
   spinGroup = new THREE.Group(); axisGroup.add(spinGroup);
+  spinGroup.rotation.y = 2.618; // 150° → China faces camera at (0,0.6,5.9)
 
   uniforms = {
     dayTex:   { value: fallbackTex('#1a5276') },
@@ -407,12 +411,6 @@ try {
     dot.position.copy(pos); dot.userData = { isCity:true, idx:i };
     spinGroup.add(dot); cityClick.push(dot);
 
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(DOT_R*1.8, DOT_R*3, 20),
-      new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.4, side:THREE.DoubleSide, depthWrite:false })
-    );
-    ring.position.copy(pos); ring.lookAt(0,0,0); spinGroup.add(ring);
-
     // Label canvas
     const lc = document.createElement('canvas'); lc.width=300; lc.height=72;
     const lx = lc.getContext('2d');
@@ -429,7 +427,7 @@ try {
     lbl.scale.set(0.7, 0.168, 1); spinGroup.add(lbl);
 
     cityData.push({
-      pos, dot, ring, lbl, lm: lbl.material, dm: dot.material,
+      pos, dot, lbl, lm: lbl.material, dm: dot.material,
       city, index: i, _st: 'night'
     });
 
@@ -547,7 +545,6 @@ try {
       }
       const col = { day:0xf9d423, night:0x1a1a3e, dawn:0xff6b35, dusk:0xe74c3c };
       d.dm.color.setHex(col[st]||0xffffff);
-      d.ring.material.color.setHex(col[st]||0xffffff);
       d.lm.opacity = { day:1, night:0.25, dawn:1, dusk:0.65 }[st] || 0.9;
     });
   }
@@ -603,17 +600,13 @@ try {
       if (d._st === 'dawn') {
         const p = 0.5 + 0.5 * Math.sin(t*3 + d.index*1.5);
         d.dm.opacity = p; d.dot.scale.setScalar(0.7 + 0.3*p);
-        d.ring.material.opacity = p * 0.5;
       } else if (d._st === 'dusk') {
         const p = 0.4 + 0.3 * Math.sin(t*2 + d.index*2);
         d.dm.opacity = p; d.dot.scale.setScalar(1);
-        d.ring.material.opacity = 0.2 + 0.2*p;
       } else if (d._st === 'day') {
         d.dm.opacity = 1; d.dot.scale.setScalar(1);
-        d.ring.material.opacity = 0.4;
       } else {
         d.dm.opacity = 0.35; d.dot.scale.setScalar(0.65);
-        d.ring.material.opacity = 0.12;
       }
     });
 
@@ -638,8 +631,9 @@ try {
     this.classList.toggle('active', rotDir === -1);
   });
   document.getElementById('resetBtn').addEventListener('click', () => {
-    camera.position.set(0.7, 0.8, 5.9);
+    camera.position.set(0, 0.5, 5.9);
     controls.target.set(0,0,0); controls.update();
+    spinGroup.rotation.y = 2.618;
     document.querySelectorAll('.ci').forEach(el => el.style.background = '');
     document.querySelectorAll('#npBtn,#spBtn').forEach(el => el.classList.remove('active'));
   });
