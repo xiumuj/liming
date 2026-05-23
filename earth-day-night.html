@@ -8,7 +8,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{overflow:hidden;background:#000;font-family:'Microsoft YaHei','PingFang SC',system-ui,-apple-system,sans-serif;color:#fff;user-select:none}
 canvas{display:block}
-#topBar{position:fixed;top:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:18px;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);padding:8px 20px;border-radius:14px;border:1px solid rgba(255,255,255,.07);z-index:10;pointer-events:auto}
+#topBar{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);padding:8px 20px;border-radius:14px;border:1px solid rgba(255,255,255,.07);z-index:10;pointer-events:auto}
 #topBar h1{font-size:15px;font-weight:600;white-space:nowrap;background:linear-gradient(90deg,#f9d423,#ff4e50);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:.5px}
 #topBar .cg{display:flex;align-items:center;gap:8px}
 #topBar label{font-size:12px;color:rgba(255,255,255,.5);white-space:nowrap}
@@ -46,7 +46,7 @@ canvas{display:block}
 #errMsg .rb{margin-top:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:8px 24px;border-radius:8px;cursor:pointer;font-size:14px;font-family:inherit;transition:.2s}
 #errMsg .rb:hover{background:rgba(255,255,255,.2)}
 @media(max-width:720px){
-#topBar{top:8px;padding:6px 12px;gap:10px;flex-wrap:wrap;justify-content:center}
+#topBar{bottom:12px;padding:6px 12px;gap:8px;flex-wrap:wrap;justify-content:center}
 #topBar h1{font-size:13px}
 #topBar input[type=range]{width:50px}
 #cityPanel{left:8px;bottom:8px;padding:10px 12px;min-width:155px}
@@ -78,10 +78,13 @@ canvas{display:block}
   <h1>🌍 地球昼夜交替</h1>
   <div class="cg">
     <label>速度</label>
-    <input type="range" id="spd" min="0" max="5" step="0.25" value="1">
-    <span class="sv" id="spdVal">1×</span>
+    <input type="range" id="spd" min="0" max="5" step="0.25" value="0.3">
+    <span class="sv" id="spdVal">0.3×</span>
+    <button id="pauseBtn">⏸ 暂停</button>
   </div>
-  <button id="pauseBtn">⏸ 暂停</button>
+  <button id="dirBtn">↺ 自西向东</button>
+  <button id="npBtn">⬆ 北极</button>
+  <button id="spBtn">⬇ 南极</button>
   <button id="resetBtn">⟲ 重置视角</button>
 </div>
 
@@ -95,6 +98,7 @@ canvas{display:block}
   <div>🖱 拖拽 · 滚轮缩放 · 点击城市</div>
   <div style="margin-top:6px">地球自<span class="hl">西</span>向<span class="hl">东</span>转动 → 太阳东升西落<br><span class="hl">黎明</span>从东方开始</div>
   <div style="margin-top:6px;font-size:11px;color:rgba(255,255,255,.35)">●白天 ●夜晚 ●黎明 ●黄昏</div>
+  <div style="margin-top:4px;font-size:11px">夏至日 · 北极圈极昼 ☀️</div>
 </div>
 
 <script type="importmap">
@@ -138,7 +142,7 @@ const CITIES = [
   {name:'纽约', lat:40.7, lng:-74.0, country:'美国'},
 ];
 const ER = 1.8, SUN_D = 8, TILT = 23.44 * Math.PI / 180;
-const SUN_POS = new THREE.Vector3(5.5, 3.8, 5).normalize().multiplyScalar(SUN_D);
+const SUN_POS = new THREE.Vector3(7.34, 2.93, -1.27); // 夏至太阳位置（北极圈极昼）
 
 // ── Texture helpers ────────────────────────────────────────
 function loadImgEl(id) {
@@ -210,57 +214,10 @@ const earthFS = `
   }
 `;
 
-const cloudFS = `
-  uniform sampler2D tex;
-  uniform vec3 sunDir;
-  varying vec3 vNormal;
-  varying vec2 vUv;
-
-  void main() {
-    vec3 N = normalize(vNormal);
-    float ca = dot(N, normalize(sunDir));
-    float day = smoothstep(-0.15, 0.15, ca);
-    float alpha = texture(tex, vUv).a * day * 0.7;
-    gl_FragColor = vec4(1.0, 1.0, 1.0, alpha);
-  }
-`;
-
-const atmoVS = `
-  varying vec3 vNormal;
-  varying vec3 vViewDir;
-  void main() {
-    vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
-    vNormal = normalize(normalMatrix * normal);
-    vViewDir = normalize(-mvPos.xyz);
-    gl_Position = projectionMatrix * mvPos;
-  }
-`;
-
-const atmoFS = `
-  varying vec3 vNormal;
-  varying vec3 vViewDir;
-  void main() {
-    float rim = 1.0 - max(0.0, dot(vNormal, vViewDir));
-    rim = pow(rim, 3.0);
-    gl_FragColor = vec4(0.3, 0.6, 1.0, rim * 0.18);
-  }
-`;
-
-const atmoOuterFS = `
-  varying vec3 vNormal;
-  varying vec3 vViewDir;
-  void main() {
-    float rim = 1.0 - max(0.0, dot(vNormal, vViewDir));
-    rim = pow(rim, 4.0);
-    gl_FragColor = vec4(0.2, 0.5, 0.9, rim * 0.06);
-  }
-`;
-
 // ── Scene ──────────────────────────────────────────────────
-let scene, camera, renderer, controls, earthGroup, tiltGroup, uniforms;
-let cloudGroup = null;
+let scene, camera, renderer, controls, axisGroup, spinGroup, uniforms;
 let cityData = [], cityClick = [];
-let paused = false, speedMul = 1;
+let paused = false, speedMul = 0.3, rotDir = 1;
 const BASE_SPEED = 0.6;
 const clock = new THREE.Clock();
 
@@ -268,7 +225,7 @@ try {
   scene = new THREE.Scene();
 
   camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.set(1.2, 1.0, 5.8);
+  camera.position.set(0.7, 0.8, 5.9);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -285,8 +242,22 @@ try {
   controls.minDistance = 2.6; controls.maxDistance = 14;
   controls.target.set(0, 0, 0); controls.update();
 
-  // ── Sun ──────────────────────────────────────────────────
-  const sunMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  // ── Sun (full-coverage canvas texture, never shows bare color) ──
+  function makeSunTex() {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 512;
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(256,256,24, 256,256,256);
+    g.addColorStop(0, '#fff8e0');
+    g.addColorStop(0.30, '#ffcc33');
+    g.addColorStop(0.55, '#ff8800');
+    g.addColorStop(0.78, '#dd5500');
+    g.addColorStop(1, '#331100');
+    x.fillStyle = g; x.fillRect(0,0,512,512);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }
+  const sunMat = new THREE.MeshBasicMaterial({ map: makeSunTex() });
   const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 24), sunMat);
   sunMesh.position.copy(SUN_POS); scene.add(sunMesh);
 
@@ -328,8 +299,8 @@ try {
   scene.add(new THREE.AmbientLight(0x111133, 0.08));
 
   // ── Earth ──────────────────────────────────────────────────
-  earthGroup = new THREE.Group(); scene.add(earthGroup);
-  tiltGroup = new THREE.Group(); tiltGroup.rotation.x = TILT; earthGroup.add(tiltGroup);
+  axisGroup = new THREE.Group(); axisGroup.rotation.x = TILT; scene.add(axisGroup);
+  spinGroup = new THREE.Group(); axisGroup.add(spinGroup);
 
   uniforms = {
     dayTex:   { value: fallbackTex('#1a5276') },
@@ -343,19 +314,20 @@ try {
     vertexShader: earthVS,
     fragmentShader: earthFS,
   });
-  tiltGroup.add(new THREE.Mesh(new THREE.SphereGeometry(ER, 64, 64), earthMat));
+  spinGroup.add(new THREE.Mesh(new THREE.SphereGeometry(ER, 64, 64), earthMat));
 
-  // ── Atmosphere ─────────────────────────────────────────────
-  const makeAtmo = (radius, fs, op) => {
-    const m = new THREE.ShaderMaterial({
-      vertexShader: atmoVS, fragmentShader: fs,
-      transparent: true, side: THREE.FrontSide,
-      depthWrite: false, blending: THREE.AdditiveBlending,
+  // ── Axis line ─────────────────────────────────────────────
+  {
+    const len = ER * 1.4;
+    const g = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, -len, 0),
+      new THREE.Vector3(0, len, 0)
+    ]);
+    const mat = new THREE.LineBasicMaterial({
+      color: 0xf9d423, transparent: true, opacity: 0.08,
     });
-    tiltGroup.add(new THREE.Mesh(new THREE.SphereGeometry(radius, 48, 48), m));
-  };
-  makeAtmo(ER*1.015, atmoFS);
-  makeAtmo(ER*1.03, atmoOuterFS);
+    axisGroup.add(new THREE.Line(g, mat));
+  }
 
   // ── Rotation ring ──────────────────────────────────────────
   {
@@ -378,7 +350,7 @@ try {
       c.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), new THREE.Vector3(-z,0,x).normalize());
       g.add(c);
     }
-    tiltGroup.add(g);
+    spinGroup.add(g);
   }
 
   // ── Equator ────────────────────────────────────────────────
@@ -388,11 +360,30 @@ try {
       const t = i/64*Math.PI*2;
       pts.push(new THREE.Vector3(ER*1.005*Math.cos(t), 0, ER*1.005*Math.sin(t)));
     }
-    tiltGroup.add(new THREE.Line(
+    spinGroup.add(new THREE.Line(
       new THREE.BufferGeometry().setFromPoints(pts),
       new THREE.LineBasicMaterial({ color:0xf9d423, transparent:true, opacity:0.06 })
     ));
   }
+
+  // ── Polar circles (Arctic 66.5°N / Antarctic 66.5°S) ────
+  function makeLatCircle(latDeg, color, opacity) {
+    const r = ER * 1.005;
+    const phi = latDeg * Math.PI / 180;
+    const y = r * Math.sin(phi);
+    const xzR = r * Math.cos(phi);
+    const pts = [];
+    for (let i = 0; i <= 64; i++) {
+      const t = i/64*Math.PI*2;
+      pts.push(new THREE.Vector3(xzR*Math.cos(t), y, xzR*Math.sin(t)));
+    }
+    return new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({ color, transparent:true, opacity })
+    );
+  }
+  spinGroup.add(makeLatCircle(66.5, 0x4fc3f7, 0.12));
+  spinGroup.add(makeLatCircle(-66.5, 0x4fc3f7, 0.12));
 
   // ── City markers ──────────────────────────────────────────
   function ll2p(lat, lng, r) {
@@ -414,13 +405,13 @@ try {
       new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true })
     );
     dot.position.copy(pos); dot.userData = { isCity:true, idx:i };
-    tiltGroup.add(dot); cityClick.push(dot);
+    spinGroup.add(dot); cityClick.push(dot);
 
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(DOT_R*1.8, DOT_R*3, 20),
       new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.4, side:THREE.DoubleSide, depthWrite:false })
     );
-    ring.position.copy(pos); ring.lookAt(0,0,0); tiltGroup.add(ring);
+    ring.position.copy(pos); ring.lookAt(0,0,0); spinGroup.add(ring);
 
     // Label canvas
     const lc = document.createElement('canvas'); lc.width=300; lc.height=72;
@@ -435,7 +426,7 @@ try {
       map: new THREE.CanvasTexture(lc), transparent:true, depthWrite:false, opacity:0.9
     }));
     lbl.position.copy(pos.clone().multiplyScalar(1.24));
-    lbl.scale.set(0.7, 0.168, 1); tiltGroup.add(lbl);
+    lbl.scale.set(0.7, 0.168, 1); spinGroup.add(lbl);
 
     cityData.push({
       pos, dot, ring, lbl, lm: lbl.material, dm: dot.material,
@@ -447,6 +438,8 @@ try {
     item.addEventListener('click', () => focusCity(i));
     cityListEl.appendChild(item);
   });
+  document.getElementById('npBtn').addEventListener('click', () => focusPole(true));
+  document.getElementById('spBtn').addEventListener('click', () => focusPole(false));
 
   // ── Focus city ─────────────────────────────────────────────
   function focusCity(idx) {
@@ -459,6 +452,30 @@ try {
     document.querySelectorAll('.ci').forEach(el => el.style.background = '');
     const item = document.getElementById(`ci-${idx}`);
     if (item) item.style.background = 'rgba(249,212,35,0.12)';
+    const dur = 800, start = performance.now();
+    (function anim(t) {
+      const p = Math.min((t-start)/dur, 1), e = p<0.5 ? 2*p*p : -1+(4-2*p)*p;
+      camera.position.lerpVectors(sp, tp, e);
+      controls.target.lerpVectors(st, wp, e);
+      controls.update();
+      if (p < 1) requestAnimationFrame(anim);
+    })(start);
+  }
+
+  // ── Focus pole ─────────────────────────────────────────────
+  function focusPole(isNorth) {
+    const temp = new THREE.Object3D();
+    temp.position.set(0, isNorth ? ER : -ER, 0);
+    spinGroup.add(temp);
+    const wp = new THREE.Vector3();
+    temp.getWorldPosition(wp);
+    spinGroup.remove(temp);
+    const dir = wp.clone().normalize();
+    const tp = dir.clone().multiplyScalar(4);
+    const sp = camera.position.clone(), st = controls.target.clone();
+    document.querySelectorAll('.ci').forEach(el => el.style.background = '');
+    document.querySelectorAll('#npBtn,#spBtn').forEach(el => el.classList.remove('active'));
+    document.getElementById(isNorth ? 'npBtn' : 'spBtn').classList.add('active');
     const dur = 800, start = performance.now();
     (function anim(t) {
       const p = Math.min((t-start)/dur, 1), e = p<0.5 ? 2*p*p : -1+(4-2*p)*p;
@@ -488,12 +505,19 @@ try {
 
   // ── Status computation ────────────────────────────────────
   function compStatus(sd, d) {
-    const n = d.pos.clone().normalize(), ca = n.dot(sd);
-    const eps = 0.005, {x,y,z} = d.pos;
-    const rx = new THREE.Vector3(
-      x*Math.cos(eps)-z*Math.sin(eps), y, x*Math.sin(eps)+z*Math.cos(eps)
-    ).normalize();
-    const toward = rx.dot(sd) > ca;
+    const wp = new THREE.Vector3();
+    d.dot.getWorldPosition(wp);
+    const n = wp.normalize(), ca = n.dot(sd);
+    // Use local tangent rotation in world space to detect morning/evening
+    const localPos = d.pos.clone();
+    const eps = 0.005;
+    const rxLocal = new THREE.Vector3(
+      localPos.x*Math.cos(eps)-localPos.z*Math.sin(eps),
+      localPos.y,
+      localPos.x*Math.sin(eps)+localPos.z*Math.cos(eps)
+    );
+    const rxWorld = rxLocal.clone().applyMatrix4(d.dot.matrixWorld).normalize();
+    const toward = rxWorld.dot(sd) > ca;
     if (ca > 0.12) return 'day';
     if (ca > 0) return toward ? 'day' : 'dusk';
     if (ca > -0.12) return toward ? 'dawn' : 'night';
@@ -501,15 +525,16 @@ try {
   }
 
   function updateCities() {
+    scene.updateMatrixWorld(true);
     const sd = uniforms.sunDir.value;
     cityData.forEach(d => {
       const st = compStatus(sd, d); d._st = st;
       const de = document.getElementById(`cd-${d.index}`);
       if (de) de.className = `cd ${st}`;
 
-      const iq = new THREE.Quaternion().copy(earthGroup.quaternion).invert();
-      const sl = sd.clone().applyQuaternion(iq)
-        .applyQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), -TILT));
+      const iq = new THREE.Quaternion();
+      spinGroup.getWorldQuaternion(iq).invert();
+      const sl = sd.clone().applyQuaternion(iq);
       const noon = Math.atan2(sl.z, sl.x) * 180 / Math.PI;
       let diff = ((d.city.lng - noon) % 360 + 540) % 360 - 180;
       const lh = (12 + diff/15 + 24) % 24;
@@ -533,14 +558,13 @@ try {
 
   (async () => {
     try {
-      const [earthImg, specImg, sunImg, cloudImg] = await Promise.all([
+      const [earthImg, specImg, sunImg] = await Promise.all([
         loadImgEl('texEarthDay').catch(()=>null),
         loadImgEl('texEarthSpec').catch(()=>null),
         loadImgEl('texSun').catch(()=>null),
-        loadImgEl('texEarthCloud').catch(()=>null),
       ]);
-      console.log('tex: earth=%s spec=%s sun=%s cloud=%s',
-        earthImg?'✅':'❌', specImg?'✅':'❌', sunImg?'✅':'❌', cloudImg?'✅':'❌');
+      console.log('tex: earth=%s spec=%s sun=%s',
+        earthImg?'✅':'❌', specImg?'✅':'❌', sunImg?'✅':'❌');
 
       if (earthImg) {
         const t = new THREE.Texture(earthImg);
@@ -557,20 +581,6 @@ try {
         t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true;
         sunMat.map = t; sunMat.needsUpdate = true;
       }
-      if (cloudImg) {
-        const t = new THREE.Texture(cloudImg);
-        t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true;
-        cloudGroup = new THREE.Group(); cloudGroup.rotation.x = TILT;
-        earthGroup.add(cloudGroup);
-        cloudGroup.add(new THREE.Mesh(
-          new THREE.SphereGeometry(ER*1.015, 48, 48),
-          new THREE.ShaderMaterial({
-            uniforms: { tex: {value:t}, sunDir: {value:SUN_POS.clone().normalize()} },
-            vertexShader: earthVS, fragmentShader: cloudFS,
-            transparent: true, depthWrite: false,
-          })
-        ));
-      }
     } catch(e) { console.warn('tex load error:', e); }
     clearTimeout(loadTimer);
     document.getElementById('loading').classList.add('hidden');
@@ -582,8 +592,7 @@ try {
     const dt = clock.getDelta(), t = performance.now() / 1000;
 
     if (!paused) {
-      earthGroup.rotation.y += BASE_SPEED * speedMul * dt;
-      if (cloudGroup) cloudGroup.rotation.y += BASE_SPEED * speedMul * dt * 1.03;
+      spinGroup.rotation.y += BASE_SPEED * speedMul * dt * rotDir;
     }
 
     if (!cityData._lu || t - cityData._lu > 0.2) {
@@ -623,10 +632,16 @@ try {
     this.textContent = paused ? '▶ 播放' : '⏸ 暂停';
     this.classList.toggle('active', paused);
   });
+  document.getElementById('dirBtn').addEventListener('click', function() {
+    rotDir *= -1;
+    this.textContent = rotDir === 1 ? '↺ 自西向东' : '↻ 自东向西';
+    this.classList.toggle('active', rotDir === -1);
+  });
   document.getElementById('resetBtn').addEventListener('click', () => {
-    camera.position.set(1.2, 1.0, 5.8);
+    camera.position.set(0.7, 0.8, 5.9);
     controls.target.set(0,0,0); controls.update();
     document.querySelectorAll('.ci').forEach(el => el.style.background = '');
+    document.querySelectorAll('#npBtn,#spBtn').forEach(el => el.classList.remove('active'));
   });
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
