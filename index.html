@@ -426,26 +426,15 @@ try {
 
   // ── Rotation ring ──────────────────────────────────────────
   {
-    const g = new THREE.Group(), R = ER*1.04, pts = [];
+    const R = ER*1.04, pts = [];
     for (let i = 0; i <= 48; i++) {
       const t = i/48*Math.PI*2;
       pts.push(new THREE.Vector3(R*Math.cos(t), 0, R*Math.sin(t)));
     }
-    g.add(new THREE.Line(
+    spinGroup.add(new THREE.Line(
       new THREE.BufferGeometry().setFromPoints(pts),
       new THREE.LineBasicMaterial({ color:0xf9d423, transparent:true, opacity:0.12, depthTest:true })
     ));
-    for (let i = 0; i < 12; i++) {
-      const t = i/12*Math.PI*2, x = R*Math.cos(t), z = R*Math.sin(t);
-      const c = new THREE.Mesh(
-        new THREE.ConeGeometry(0.025, 0.06, 6),
-        new THREE.MeshBasicMaterial({ color:0xf9d423, transparent:true, opacity:0.25 })
-      );
-      c.position.set(x,0,z);
-      c.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), new THREE.Vector3(-z,0,x).normalize());
-      g.add(c);
-    }
-    spinGroup.add(g);
   }
 
   // ── Equator ────────────────────────────────────────────────
