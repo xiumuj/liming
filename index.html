@@ -272,9 +272,11 @@ const earthFS = `
     float dayFactor = smoothstep(-0.08, 0.08, ca);
 
     vec3 texColor = texture(dayTex, vUv).rgb;
+    // Non-linear brightening: lift dark pixels (forest) more than bright pixels (desert)
+    texColor = pow(texColor, vec3(0.8));
     float specVal = texture(specTex, vUv).r;
 
-    // Day side (brighter base, balanced spec contrast)
+    // Day side
     vec3 dayCol = texColor * (1.05 + 0.3 * specVal);
 
     // Night side
