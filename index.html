@@ -92,8 +92,8 @@ canvas{display:block}
   <h1>🌍 地球昼夜交替</h1>
   <div class="cg">
     <label>速度</label>
-    <input type="range" id="spd" min="0" max="5" step="0.25" value="0.3">
-    <span class="sv" id="spdVal">0.3×</span>
+    <input type="range" id="spd" min="0" max="5" step="0.25" value="0.1">
+    <span class="sv" id="spdVal">0.1×</span>
     <button id="pauseBtn">⏸ 暂停</button>
   </div>
   <button id="dirBtn">↺ 自西向东</button>
@@ -274,8 +274,8 @@ const earthFS = `
     vec3 texColor = texture(dayTex, vUv).rgb;
     float specVal = texture(specTex, vUv).r;
 
-    // Day side
-    vec3 dayCol = texColor * (0.85 + 0.35 * specVal);
+    // Day side (brighter base, balanced spec contrast)
+    vec3 dayCol = texColor * (1.05 + 0.3 * specVal);
 
     // Night side
     vec3 nightColOut = nightCol + texColor * 0.035;
@@ -304,7 +304,7 @@ const earthFS = `
 // ── Scene ──────────────────────────────────────────────────
 let scene, camera, renderer, controls, axisGroup, spinGroup, uniforms;
 let cityData = [], cityClick = [];
-let paused = false, speedMul = 0.3, rotDir = 1;
+let paused = false, speedMul = 0.1, rotDir = 1;
 const BASE_SPEED = 0.6;
 const clock = new THREE.Clock();
 
