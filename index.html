@@ -14,9 +14,11 @@ canvas{display:block}
 #topBar label{font-size:12px;color:rgba(255,255,255,.5);white-space:nowrap}
 #topBar input[type=range]{width:76px;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,.2);border-radius:2px;outline:none}
 #topBar input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:#f9d423;cursor:pointer}
-#topBar button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;padding:4px 14px;border-radius:8px;cursor:pointer;font-size:13px;transition:.2s;font-family:inherit}
+#topBar button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;padding:4px 14px;border-radius:8px;cursor:pointer;font-size:13px;transition:.2s;font-family:inherit;white-space:nowrap}
 #topBar button:hover{background:rgba(255,255,255,.16)}
 #topBar button.active{background:rgba(249,212,35,.22);border-color:#f9d423}
+#topBar .seasBtn{padding:3px 9px;font-size:12px;border-radius:6px}
+#topBar .seasBtn.active{background:rgba(79,195,247,.2);border-color:#4fc3f7;color:#4fc3f7}
 #topBar .sv{font-size:13px;color:#f9d423;min-width:28px;text-align:center}
 #cityPanel{position:fixed;left:16px;bottom:16px;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px 16px;min-width:200px;max-height:75vh;overflow-y:auto;z-index:10;pointer-events:auto}
 #cityPanel .pt{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:8px;letter-spacing:.5px;cursor:pointer}
@@ -73,7 +75,6 @@ canvas{display:block}
 
 <img id="texEarthDay" src="textures/earth_atmos_2048.jpg" style="display:none">
 <img id="texEarthSpec" src="textures/earth_specular_2048.jpg" style="display:none">
-<img id="texEarthCloud" src="textures/earth_clouds_1024.png" style="display:none">
 <img id="texSun" src="textures/sun_2k.jpg" style="display:none">
 
 <div id="loading">
@@ -97,6 +98,12 @@ canvas{display:block}
     <button id="pauseBtn">⏸ 暂停</button>
   </div>
   <button id="dirBtn">↺ 自西向东</button>
+  <div class="cg">
+    <button class="seasBtn" data-seas="chunfen">春分</button>
+    <button class="seasBtn" data-seas="xiazhi">夏至</button>
+    <button class="seasBtn" data-seas="qiufen">秋分</button>
+    <button class="seasBtn" data-seas="dongzhi">冬至</button>
+  </div>
   <button id="npBtn">⬆ 北极</button>
   <button id="spBtn">⬇ 南极</button>
   <button id="resetBtn">⟲ 重置视角</button>
@@ -112,8 +119,12 @@ canvas{display:block}
 </div>
 
 <div id="infoBox">
-  本模型不代表天体大小和距离的实际比例关系
+  <div id="sunInfo">…</div>
+  <div style="margin-top:6px;opacity:.55">本模型不代表天体大小和距离的实际比例关系</div>
 </div>
+
+<!-- 内嵌纹理（base64 data URI）：file:// 双击打开时绕过跨域限制，保证 WebGL 纹理可上传 -->
+<script src="textures.embed.js"></script>
 
 <script type="importmap">
 {
@@ -158,78 +169,581 @@ const INITIAL_CITIES = [
 ];
 
 const CITY_DB = [
-  {name:'北京', lat:39.9, lng:116.4, country:'中国'},
-  {name:'上海', lat:31.2, lng:121.5, country:'中国'},
-  {name:'广州', lat:23.1, lng:113.3, country:'中国'},
-  {name:'乌鲁木齐', lat:43.8, lng:87.6, country:'中国'},
-  {name:'深圳', lat:22.5, lng:114.1, country:'中国'},
-  {name:'成都', lat:30.6, lng:104.1, country:'中国'},
-  {name:'杭州', lat:30.3, lng:120.2, country:'中国'},
-  {name:'武汉', lat:30.6, lng:114.3, country:'中国'},
-  {name:'西安', lat:34.3, lng:108.9, country:'中国'},
-  {name:'重庆', lat:29.6, lng:106.5, country:'中国'},
-  {name:'哈尔滨', lat:45.8, lng:126.5, country:'中国'},
-  {name:'昆明', lat:25.0, lng:102.7, country:'中国'},
-  {name:'拉萨', lat:29.7, lng:91.1, country:'中国'},
-  {name:'香港', lat:22.3, lng:114.2, country:'中国'},
-  {name:'台北', lat:25.0, lng:121.5, country:'中国台湾'},
-  {name:'天津', lat:39.1, lng:117.2, country:'中国'},
-  {name:'石家庄', lat:38.0, lng:114.5, country:'中国'},
-  {name:'太原', lat:37.9, lng:112.5, country:'中国'},
-  {name:'呼和浩特', lat:40.8, lng:111.7, country:'中国'},
-  {name:'沈阳', lat:41.8, lng:123.4, country:'中国'},
-  {name:'长春', lat:43.9, lng:125.3, country:'中国'},
-  {name:'南京', lat:32.1, lng:118.8, country:'中国'},
-  {name:'合肥', lat:31.8, lng:117.3, country:'中国'},
-  {name:'福州', lat:26.1, lng:119.3, country:'中国'},
-  {name:'南昌', lat:28.7, lng:115.9, country:'中国'},
-  {name:'济南', lat:36.7, lng:117.0, country:'中国'},
-  {name:'郑州', lat:34.8, lng:113.7, country:'中国'},
-  {name:'长沙', lat:28.2, lng:112.9, country:'中国'},
-  {name:'南宁', lat:22.8, lng:108.4, country:'中国'},
-  {name:'海口', lat:20.0, lng:110.3, country:'中国'},
-  {name:'贵阳', lat:26.7, lng:106.6, country:'中国'},
-  {name:'兰州', lat:36.0, lng:103.8, country:'中国'},
-  {name:'西宁', lat:36.6, lng:101.8, country:'中国'},
-  {name:'银川', lat:38.5, lng:106.3, country:'中国'},
-  {name:'澳门', lat:22.2, lng:113.6, country:'中国'},
-  {name:'东京', lat:35.7, lng:139.7, country:'日本'},
-  {name:'大阪', lat:34.7, lng:135.5, country:'日本'},
-  {name:'首尔', lat:37.6, lng:127.0, country:'韩国'},
-  {name:'曼谷', lat:13.8, lng:100.5, country:'泰国'},
-  {name:'新加坡', lat:1.3, lng:103.8, country:'新加坡'},
-  {name:'孟买', lat:19.1, lng:72.9, country:'印度'},
-  {name:'德里', lat:28.6, lng:77.2, country:'印度'},
-  {name:'雅加达', lat:-6.2, lng:106.8, country:'印度尼西亚'},
-  {name:'迪拜', lat:25.2, lng:55.3, country:'阿联酋'},
-  {name:'伊斯坦布尔', lat:41.0, lng:28.9, country:'土耳其'},
-  {name:'伦敦', lat:51.5, lng:-0.1, country:'英国'},
-  {name:'巴黎', lat:48.9, lng:2.3, country:'法国'},
-  {name:'柏林', lat:52.5, lng:13.4, country:'德国'},
-  {name:'罗马', lat:41.9, lng:12.5, country:'意大利'},
-  {name:'莫斯科', lat:55.8, lng:37.6, country:'俄罗斯'},
-  {name:'马德里', lat:40.4, lng:-3.7, country:'西班牙'},
-  {name:'阿姆斯特丹', lat:52.4, lng:4.9, country:'荷兰'},
-  {name:'斯德哥尔摩', lat:59.3, lng:18.1, country:'瑞典'},
-  {name:'雅典', lat:38.0, lng:23.7, country:'希腊'},
-  {name:'纽约', lat:40.7, lng:-74.0, country:'美国'},
-  {name:'洛杉矶', lat:34.1, lng:-118.2, country:'美国'},
-  {name:'芝加哥', lat:41.9, lng:-87.6, country:'美国'},
-  {name:'旧金山', lat:37.8, lng:-122.4, country:'美国'},
-  {name:'多伦多', lat:43.7, lng:-79.4, country:'加拿大'},
-  {name:'墨西哥城', lat:19.4, lng:-99.1, country:'墨西哥'},
-  {name:'圣保罗', lat:-23.5, lng:-46.6, country:'巴西'},
-  {name:'布宜诺斯艾利斯', lat:-34.6, lng:-58.4, country:'阿根廷'},
-  {name:'悉尼', lat:-33.9, lng:151.2, country:'澳大利亚'},
-  {name:'墨尔本', lat:-37.8, lng:145.0, country:'澳大利亚'},
-  {name:'奥克兰', lat:-36.8, lng:174.8, country:'新西兰'},
-  {name:'开普敦', lat:-33.9, lng:18.4, country:'南非'},
-  {name:'开罗', lat:30.0, lng:31.2, country:'埃及'},
-  {name:'拉各斯', lat:6.5, lng:3.4, country:'尼日利亚'},
-  {name:'内罗毕', lat:-1.3, lng:36.8, country:'肯尼亚'},
+  // ── 直辖市 ──
+  {name:'北京', lat:39.90, lng:116.41, country:'中国'},
+  {name:'天津', lat:39.13, lng:117.20, country:'中国'},
+  {name:'上海', lat:31.23, lng:121.47, country:'中国'},
+  {name:'重庆', lat:29.56, lng:106.55, country:'中国'},
+  // ── 河北 ──
+  {name:'石家庄', lat:38.04, lng:114.51, country:'中国'},
+  {name:'唐山', lat:39.63, lng:118.18, country:'中国'},
+  {name:'秦皇岛', lat:39.94, lng:119.60, country:'中国'},
+  {name:'邯郸', lat:36.63, lng:114.54, country:'中国'},
+  {name:'邢台', lat:37.07, lng:114.50, country:'中国'},
+  {name:'保定', lat:38.87, lng:115.46, country:'中国'},
+  {name:'张家口', lat:40.77, lng:114.88, country:'中国'},
+  {name:'承德', lat:40.95, lng:117.96, country:'中国'},
+  {name:'沧州', lat:38.30, lng:116.84, country:'中国'},
+  {name:'廊坊', lat:39.54, lng:116.68, country:'中国'},
+  {name:'衡水', lat:37.74, lng:115.67, country:'中国'},
+  // ── 山西 ──
+  {name:'太原', lat:37.87, lng:112.55, country:'中国'},
+  {name:'大同', lat:40.08, lng:113.30, country:'中国'},
+  {name:'阳泉', lat:37.86, lng:113.58, country:'中国'},
+  {name:'长治', lat:36.20, lng:113.12, country:'中国'},
+  {name:'晋城', lat:35.49, lng:112.85, country:'中国'},
+  {name:'朔州', lat:39.33, lng:112.43, country:'中国'},
+  {name:'晋中', lat:37.69, lng:112.75, country:'中国'},
+  {name:'运城', lat:35.03, lng:111.00, country:'中国'},
+  {name:'忻州', lat:38.42, lng:112.73, country:'中国'},
+  {name:'临汾', lat:36.08, lng:111.52, country:'中国'},
+  {name:'吕梁', lat:37.52, lng:111.14, country:'中国'},
+  // ── 内蒙古 ──
+  {name:'呼和浩特', lat:40.84, lng:111.75, country:'中国'},
+  {name:'包头', lat:40.66, lng:109.84, country:'中国'},
+  {name:'乌海', lat:39.65, lng:106.79, country:'中国'},
+  {name:'赤峰', lat:42.26, lng:118.89, country:'中国'},
+  {name:'通辽', lat:43.65, lng:122.24, country:'中国'},
+  {name:'鄂尔多斯', lat:39.61, lng:109.78, country:'中国'},
+  {name:'呼伦贝尔', lat:49.21, lng:119.77, country:'中国'},
+  {name:'巴彦淖尔', lat:40.74, lng:107.42, country:'中国'},
+  {name:'乌兰察布', lat:40.99, lng:113.13, country:'中国'},
+  {name:'乌兰浩特', lat:46.07, lng:122.07, country:'中国'},
+  {name:'锡林浩特', lat:43.93, lng:116.05, country:'中国'},
+  {name:'阿拉善', lat:38.85, lng:105.73, country:'中国'},
+  // ── 辽宁 ──
+  {name:'沈阳', lat:41.80, lng:123.43, country:'中国'},
+  {name:'大连', lat:38.91, lng:121.61, country:'中国'},
+  {name:'鞍山', lat:41.11, lng:122.99, country:'中国'},
+  {name:'抚顺', lat:41.88, lng:123.96, country:'中国'},
+  {name:'本溪', lat:41.29, lng:123.77, country:'中国'},
+  {name:'丹东', lat:40.13, lng:124.38, country:'中国'},
+  {name:'锦州', lat:41.10, lng:121.13, country:'中国'},
+  {name:'营口', lat:40.67, lng:122.24, country:'中国'},
+  {name:'阜新', lat:42.02, lng:121.67, country:'中国'},
+  {name:'辽阳', lat:41.27, lng:123.17, country:'中国'},
+  {name:'盘锦', lat:41.12, lng:122.07, country:'中国'},
+  {name:'铁岭', lat:42.29, lng:123.84, country:'中国'},
+  {name:'朝阳', lat:41.57, lng:120.45, country:'中国'},
+  {name:'葫芦岛', lat:40.71, lng:120.84, country:'中国'},
+  // ── 吉林 ──
+  {name:'长春', lat:43.88, lng:125.32, country:'中国'},
+  {name:'吉林', lat:43.84, lng:126.55, country:'中国'},
+  {name:'四平', lat:43.17, lng:124.35, country:'中国'},
+  {name:'辽源', lat:42.89, lng:125.14, country:'中国'},
+  {name:'通化', lat:41.73, lng:125.94, country:'中国'},
+  {name:'白山', lat:41.94, lng:126.42, country:'中国'},
+  {name:'松原', lat:45.14, lng:124.83, country:'中国'},
+  {name:'白城', lat:45.62, lng:122.84, country:'中国'},
+  {name:'延吉', lat:42.90, lng:129.48, country:'中国'},
+  // ── 黑龙江 ──
+  {name:'哈尔滨', lat:45.80, lng:126.53, country:'中国'},
+  {name:'齐齐哈尔', lat:47.35, lng:123.92, country:'中国'},
+  {name:'鸡西', lat:45.30, lng:130.97, country:'中国'},
+  {name:'鹤岗', lat:47.35, lng:130.30, country:'中国'},
+  {name:'双鸭山', lat:46.65, lng:131.16, country:'中国'},
+  {name:'大庆', lat:46.59, lng:125.10, country:'中国'},
+  {name:'伊春', lat:47.73, lng:128.84, country:'中国'},
+  {name:'佳木斯', lat:46.80, lng:130.32, country:'中国'},
+  {name:'七台河', lat:45.77, lng:131.00, country:'中国'},
+  {name:'牡丹江', lat:44.55, lng:129.63, country:'中国'},
+  {name:'黑河', lat:50.25, lng:127.53, country:'中国'},
+  {name:'绥化', lat:46.65, lng:126.99, country:'中国'},
+  {name:'大兴安岭', lat:50.42, lng:124.12, country:'中国'},
+  // ── 江苏 ──
+  {name:'南京', lat:32.06, lng:118.80, country:'中国'},
+  {name:'无锡', lat:31.49, lng:120.31, country:'中国'},
+  {name:'徐州', lat:34.20, lng:117.28, country:'中国'},
+  {name:'常州', lat:31.81, lng:119.97, country:'中国'},
+  {name:'苏州', lat:31.30, lng:120.58, country:'中国'},
+  {name:'南通', lat:31.98, lng:120.89, country:'中国'},
+  {name:'连云港', lat:34.60, lng:119.22, country:'中国'},
+  {name:'淮安', lat:33.61, lng:119.02, country:'中国'},
+  {name:'盐城', lat:33.35, lng:120.16, country:'中国'},
+  {name:'扬州', lat:32.39, lng:119.41, country:'中国'},
+  {name:'镇江', lat:32.19, lng:119.42, country:'中国'},
+  {name:'泰州', lat:32.45, lng:119.92, country:'中国'},
+  {name:'宿迁', lat:33.96, lng:118.28, country:'中国'},
+  // ── 浙江 ──
+  {name:'杭州', lat:30.27, lng:120.16, country:'中国'},
+  {name:'宁波', lat:29.87, lng:121.54, country:'中国'},
+  {name:'温州', lat:28.00, lng:120.70, country:'中国'},
+  {name:'嘉兴', lat:30.75, lng:120.76, country:'中国'},
+  {name:'湖州', lat:30.89, lng:120.09, country:'中国'},
+  {name:'绍兴', lat:30.03, lng:120.58, country:'中国'},
+  {name:'金华', lat:29.08, lng:119.65, country:'中国'},
+  {name:'衢州', lat:28.94, lng:118.87, country:'中国'},
+  {name:'舟山', lat:29.99, lng:122.21, country:'中国'},
+  {name:'台州', lat:28.66, lng:121.42, country:'中国'},
+  {name:'丽水', lat:28.47, lng:119.92, country:'中国'},
+  // ── 安徽 ──
+  {name:'合肥', lat:31.82, lng:117.23, country:'中国'},
+  {name:'芜湖', lat:31.35, lng:118.43, country:'中国'},
+  {name:'蚌埠', lat:32.92, lng:117.39, country:'中国'},
+  {name:'淮南', lat:32.63, lng:117.02, country:'中国'},
+  {name:'马鞍山', lat:31.67, lng:118.51, country:'中国'},
+  {name:'淮北', lat:33.97, lng:116.79, country:'中国'},
+  {name:'铜陵', lat:30.95, lng:117.81, country:'中国'},
+  {name:'安庆', lat:30.54, lng:117.06, country:'中国'},
+  {name:'黄山', lat:29.71, lng:118.34, country:'中国'},
+  {name:'滁州', lat:32.30, lng:118.32, country:'中国'},
+  {name:'阜阳', lat:32.89, lng:115.81, country:'中国'},
+  {name:'宿州', lat:33.65, lng:116.96, country:'中国'},
+  {name:'六安', lat:31.75, lng:116.52, country:'中国'},
+  {name:'亳州', lat:33.85, lng:115.78, country:'中国'},
+  {name:'池州', lat:30.66, lng:117.49, country:'中国'},
+  {name:'宣城', lat:30.94, lng:118.76, country:'中国'},
+  // ── 福建 ──
+  {name:'福州', lat:26.07, lng:119.30, country:'中国'},
+  {name:'厦门', lat:24.48, lng:118.09, country:'中国'},
+  {name:'莆田', lat:25.45, lng:119.01, country:'中国'},
+  {name:'三明', lat:26.26, lng:117.64, country:'中国'},
+  {name:'泉州', lat:24.87, lng:118.68, country:'中国'},
+  {name:'漳州', lat:24.51, lng:117.65, country:'中国'},
+  {name:'南平', lat:26.64, lng:118.18, country:'中国'},
+  {name:'龙岩', lat:25.08, lng:117.02, country:'中国'},
+  {name:'宁德', lat:26.66, lng:119.55, country:'中国'},
+  // ── 江西 ──
+  {name:'南昌', lat:28.68, lng:115.86, country:'中国'},
+  {name:'景德镇', lat:29.27, lng:117.18, country:'中国'},
+  {name:'萍乡', lat:27.62, lng:113.85, country:'中国'},
+  {name:'九江', lat:29.71, lng:116.00, country:'中国'},
+  {name:'新余', lat:27.82, lng:114.92, country:'中国'},
+  {name:'鹰潭', lat:28.26, lng:117.07, country:'中国'},
+  {name:'赣州', lat:25.83, lng:114.93, country:'中国'},
+  {name:'吉安', lat:27.11, lng:114.99, country:'中国'},
+  {name:'宜春', lat:27.81, lng:114.39, country:'中国'},
+  {name:'抚州', lat:27.98, lng:116.36, country:'中国'},
+  {name:'上饶', lat:28.45, lng:117.94, country:'中国'},
+  // ── 山东 ──
+  {name:'济南', lat:36.65, lng:117.12, country:'中国'},
+  {name:'青岛', lat:36.07, lng:120.38, country:'中国'},
+  {name:'淄博', lat:36.81, lng:118.05, country:'中国'},
+  {name:'枣庄', lat:34.81, lng:117.32, country:'中国'},
+  {name:'东营', lat:37.43, lng:118.67, country:'中国'},
+  {name:'烟台', lat:37.46, lng:121.45, country:'中国'},
+  {name:'潍坊', lat:36.71, lng:119.16, country:'中国'},
+  {name:'济宁', lat:35.42, lng:116.59, country:'中国'},
+  {name:'泰安', lat:36.20, lng:117.09, country:'中国'},
+  {name:'威海', lat:37.51, lng:122.12, country:'中国'},
+  {name:'日照', lat:35.42, lng:119.53, country:'中国'},
+  {name:'临沂', lat:35.10, lng:118.36, country:'中国'},
+  {name:'德州', lat:37.44, lng:116.36, country:'中国'},
+  {name:'聊城', lat:36.46, lng:115.99, country:'中国'},
+  {name:'滨州', lat:37.38, lng:117.97, country:'中国'},
+  {name:'菏泽', lat:35.23, lng:115.48, country:'中国'},
+  // ── 河南 ──
+  {name:'郑州', lat:34.75, lng:113.63, country:'中国'},
+  {name:'开封', lat:34.80, lng:114.31, country:'中国'},
+  {name:'洛阳', lat:34.62, lng:112.45, country:'中国'},
+  {name:'平顶山', lat:33.77, lng:113.19, country:'中国'},
+  {name:'安阳', lat:36.10, lng:114.39, country:'中国'},
+  {name:'鹤壁', lat:35.75, lng:114.30, country:'中国'},
+  {name:'新乡', lat:35.30, lng:113.93, country:'中国'},
+  {name:'焦作', lat:35.22, lng:113.24, country:'中国'},
+  {name:'濮阳', lat:35.76, lng:115.03, country:'中国'},
+  {name:'许昌', lat:34.04, lng:113.85, country:'中国'},
+  {name:'漯河', lat:33.58, lng:114.05, country:'中国'},
+  {name:'三门峡', lat:34.77, lng:111.20, country:'中国'},
+  {name:'南阳', lat:32.99, lng:112.53, country:'中国'},
+  {name:'商丘', lat:34.41, lng:115.66, country:'中国'},
+  {name:'信阳', lat:32.15, lng:114.09, country:'中国'},
+  {name:'周口', lat:33.63, lng:114.70, country:'中国'},
+  {name:'驻马店', lat:33.01, lng:114.02, country:'中国'},
+  {name:'济源', lat:35.09, lng:112.60, country:'中国'},
+  // ── 湖北 ──
+  {name:'武汉', lat:30.59, lng:114.31, country:'中国'},
+  {name:'黄石', lat:30.20, lng:115.04, country:'中国'},
+  {name:'十堰', lat:32.63, lng:110.80, country:'中国'},
+  {name:'宜昌', lat:30.69, lng:111.29, country:'中国'},
+  {name:'襄阳', lat:32.01, lng:112.12, country:'中国'},
+  {name:'鄂州', lat:30.39, lng:114.89, country:'中国'},
+  {name:'荆门', lat:31.04, lng:112.20, country:'中国'},
+  {name:'孝感', lat:30.92, lng:113.92, country:'中国'},
+  {name:'荆州', lat:30.33, lng:112.24, country:'中国'},
+  {name:'黄冈', lat:30.45, lng:114.87, country:'中国'},
+  {name:'咸宁', lat:29.84, lng:114.32, country:'中国'},
+  {name:'随州', lat:31.69, lng:113.38, country:'中国'},
+  {name:'恩施', lat:30.27, lng:109.49, country:'中国'},
+  {name:'仙桃', lat:30.36, lng:113.45, country:'中国'},
+  {name:'潜江', lat:30.40, lng:112.90, country:'中国'},
+  {name:'天门', lat:30.66, lng:113.17, country:'中国'},
+  // ── 湖南 ──
+  {name:'长沙', lat:28.23, lng:112.94, country:'中国'},
+  {name:'株洲', lat:27.83, lng:113.13, country:'中国'},
+  {name:'湘潭', lat:27.83, lng:112.94, country:'中国'},
+  {name:'衡阳', lat:26.89, lng:112.57, country:'中国'},
+  {name:'邵阳', lat:27.24, lng:111.47, country:'中国'},
+  {name:'岳阳', lat:29.36, lng:113.13, country:'中国'},
+  {name:'常德', lat:29.03, lng:111.70, country:'中国'},
+  {name:'张家界', lat:29.12, lng:110.48, country:'中国'},
+  {name:'益阳', lat:28.55, lng:112.36, country:'中国'},
+  {name:'郴州', lat:25.77, lng:113.01, country:'中国'},
+  {name:'永州', lat:26.42, lng:111.61, country:'中国'},
+  {name:'怀化', lat:27.55, lng:110.00, country:'中国'},
+  {name:'娄底', lat:27.70, lng:112.00, country:'中国'},
+  {name:'吉首', lat:28.31, lng:109.74, country:'中国'},
+  // ── 广东 ──
+  {name:'广州', lat:23.13, lng:113.26, country:'中国'},
+  {name:'韶关', lat:24.81, lng:113.60, country:'中国'},
+  {name:'深圳', lat:22.54, lng:114.06, country:'中国'},
+  {name:'珠海', lat:22.27, lng:113.58, country:'中国'},
+  {name:'汕头', lat:23.35, lng:116.68, country:'中国'},
+  {name:'佛山', lat:23.02, lng:113.12, country:'中国'},
+  {name:'江门', lat:22.58, lng:113.08, country:'中国'},
+  {name:'湛江', lat:21.27, lng:110.36, country:'中国'},
+  {name:'茂名', lat:21.66, lng:110.93, country:'中国'},
+  {name:'肇庆', lat:23.05, lng:112.47, country:'中国'},
+  {name:'惠州', lat:23.11, lng:114.42, country:'中国'},
+  {name:'梅州', lat:24.29, lng:116.12, country:'中国'},
+  {name:'汕尾', lat:22.79, lng:115.37, country:'中国'},
+  {name:'河源', lat:23.74, lng:114.70, country:'中国'},
+  {name:'阳江', lat:21.86, lng:111.98, country:'中国'},
+  {name:'清远', lat:23.68, lng:113.06, country:'中国'},
+  {name:'东莞', lat:23.02, lng:113.75, country:'中国'},
+  {name:'中山', lat:22.52, lng:113.39, country:'中国'},
+  {name:'潮州', lat:23.66, lng:116.62, country:'中国'},
+  {name:'揭阳', lat:23.55, lng:116.37, country:'中国'},
+  {name:'云浮', lat:22.92, lng:112.04, country:'中国'},
+  // ── 广西 ──
+  {name:'南宁', lat:22.82, lng:108.32, country:'中国'},
+  {name:'柳州', lat:24.33, lng:109.42, country:'中国'},
+  {name:'桂林', lat:25.28, lng:110.29, country:'中国'},
+  {name:'梧州', lat:23.48, lng:111.28, country:'中国'},
+  {name:'北海', lat:21.48, lng:109.12, country:'中国'},
+  {name:'防城港', lat:21.69, lng:108.35, country:'中国'},
+  {name:'钦州', lat:21.95, lng:108.65, country:'中国'},
+  {name:'贵港', lat:23.11, lng:109.60, country:'中国'},
+  {name:'玉林', lat:22.65, lng:110.18, country:'中国'},
+  {name:'百色', lat:23.90, lng:106.62, country:'中国'},
+  {name:'贺州', lat:24.40, lng:111.57, country:'中国'},
+  {name:'河池', lat:24.70, lng:108.06, country:'中国'},
+  {name:'来宾', lat:23.75, lng:109.23, country:'中国'},
+  {name:'崇左', lat:22.38, lng:107.36, country:'中国'},
+  // ── 海南 ──
+  {name:'海口', lat:20.04, lng:110.32, country:'中国'},
+  {name:'三亚', lat:18.25, lng:109.51, country:'中国'},
+  {name:'三沙', lat:16.83, lng:112.34, country:'中国'},
+  {name:'儋州', lat:19.52, lng:109.58, country:'中国'},
+  // ── 四川 ──
+  {name:'成都', lat:30.57, lng:104.07, country:'中国'},
+  {name:'自贡', lat:29.34, lng:104.78, country:'中国'},
+  {name:'攀枝花', lat:26.58, lng:101.72, country:'中国'},
+  {name:'泸州', lat:28.87, lng:105.44, country:'中国'},
+  {name:'德阳', lat:31.13, lng:104.40, country:'中国'},
+  {name:'绵阳', lat:31.47, lng:104.68, country:'中国'},
+  {name:'广元', lat:32.44, lng:105.84, country:'中国'},
+  {name:'遂宁', lat:30.51, lng:105.57, country:'中国'},
+  {name:'内江', lat:29.58, lng:105.06, country:'中国'},
+  {name:'乐山', lat:29.55, lng:103.77, country:'中国'},
+  {name:'南充', lat:30.84, lng:106.08, country:'中国'},
+  {name:'眉山', lat:30.05, lng:103.83, country:'中国'},
+  {name:'宜宾', lat:28.75, lng:104.64, country:'中国'},
+  {name:'广安', lat:30.46, lng:106.63, country:'中国'},
+  {name:'达州', lat:31.21, lng:107.47, country:'中国'},
+  {name:'雅安', lat:30.01, lng:103.04, country:'中国'},
+  {name:'巴中', lat:31.87, lng:106.77, country:'中国'},
+  {name:'资阳', lat:30.12, lng:104.64, country:'中国'},
+  {name:'马尔康', lat:31.91, lng:102.22, country:'中国'},
+  {name:'康定', lat:30.05, lng:101.96, country:'中国'},
+  {name:'西昌', lat:27.88, lng:102.26, country:'中国'},
+  // ── 贵州 ──
+  {name:'贵阳', lat:26.65, lng:106.63, country:'中国'},
+  {name:'六盘水', lat:26.59, lng:104.83, country:'中国'},
+  {name:'遵义', lat:27.73, lng:106.93, country:'中国'},
+  {name:'安顺', lat:26.25, lng:105.95, country:'中国'},
+  {name:'毕节', lat:27.28, lng:105.29, country:'中国'},
+  {name:'铜仁', lat:27.73, lng:109.19, country:'中国'},
+  {name:'兴义', lat:25.09, lng:104.90, country:'中国'},
+  {name:'凯里', lat:26.58, lng:107.98, country:'中国'},
+  {name:'都匀', lat:26.26, lng:107.52, country:'中国'},
+  // ── 云南 ──
+  {name:'昆明', lat:25.04, lng:102.71, country:'中国'},
+  {name:'曲靖', lat:25.49, lng:103.80, country:'中国'},
+  {name:'玉溪', lat:24.35, lng:102.55, country:'中国'},
+  {name:'保山', lat:25.11, lng:99.16, country:'中国'},
+  {name:'昭通', lat:27.34, lng:103.72, country:'中国'},
+  {name:'丽江', lat:26.86, lng:100.23, country:'中国'},
+  {name:'普洱', lat:22.79, lng:100.97, country:'中国'},
+  {name:'临沧', lat:23.88, lng:100.09, country:'中国'},
+  {name:'楚雄', lat:25.04, lng:101.55, country:'中国'},
+  {name:'蒙自', lat:23.37, lng:103.38, country:'中国'},
+  {name:'文山', lat:23.37, lng:104.24, country:'中国'},
+  {name:'景洪', lat:22.01, lng:100.80, country:'中国'},
+  {name:'大理', lat:25.60, lng:100.27, country:'中国'},
+  {name:'芒市', lat:24.43, lng:98.59, country:'中国'},
+  {name:'六库', lat:25.85, lng:98.86, country:'中国'},
+  {name:'香格里拉', lat:27.82, lng:99.70, country:'中国'},
+  // ── 西藏 ──
+  {name:'拉萨', lat:29.65, lng:91.10, country:'中国'},
+  {name:'日喀则', lat:29.27, lng:88.88, country:'中国'},
+  {name:'昌都', lat:31.14, lng:97.17, country:'中国'},
+  {name:'林芝', lat:29.65, lng:94.36, country:'中国'},
+  {name:'山南', lat:29.24, lng:91.77, country:'中国'},
+  {name:'那曲', lat:31.48, lng:92.06, country:'中国'},
+  {name:'狮泉河', lat:32.50, lng:80.10, country:'中国'},
+  // ── 陕西 ──
+  {name:'西安', lat:34.34, lng:108.94, country:'中国'},
+  {name:'铜川', lat:34.90, lng:108.95, country:'中国'},
+  {name:'宝鸡', lat:34.36, lng:107.24, country:'中国'},
+  {name:'咸阳', lat:34.33, lng:108.71, country:'中国'},
+  {name:'渭南', lat:34.50, lng:109.51, country:'中国'},
+  {name:'延安', lat:36.59, lng:109.49, country:'中国'},
+  {name:'汉中', lat:33.07, lng:107.03, country:'中国'},
+  {name:'榆林', lat:38.29, lng:109.73, country:'中国'},
+  {name:'安康', lat:32.69, lng:109.03, country:'中国'},
+  {name:'商洛', lat:33.87, lng:109.94, country:'中国'},
+  // ── 甘肃 ──
+  {name:'兰州', lat:36.06, lng:103.83, country:'中国'},
+  {name:'嘉峪关', lat:39.77, lng:98.29, country:'中国'},
+  {name:'金昌', lat:38.52, lng:102.19, country:'中国'},
+  {name:'白银', lat:36.55, lng:104.14, country:'中国'},
+  {name:'天水', lat:34.58, lng:105.72, country:'中国'},
+  {name:'武威', lat:37.93, lng:102.64, country:'中国'},
+  {name:'张掖', lat:38.93, lng:100.45, country:'中国'},
+  {name:'平凉', lat:35.54, lng:106.68, country:'中国'},
+  {name:'酒泉', lat:39.73, lng:98.49, country:'中国'},
+  {name:'庆阳', lat:35.71, lng:107.64, country:'中国'},
+  {name:'定西', lat:35.58, lng:104.63, country:'中国'},
+  {name:'陇南', lat:33.40, lng:104.92, country:'中国'},
+  {name:'临夏', lat:35.60, lng:103.21, country:'中国'},
+  {name:'合作', lat:34.98, lng:102.91, country:'中国'},
+  // ── 青海 ──
+  {name:'西宁', lat:36.62, lng:101.78, country:'中国'},
+  {name:'海东', lat:36.50, lng:102.10, country:'中国'},
+  {name:'共和', lat:36.28, lng:100.62, country:'中国'},
+  {name:'同仁', lat:35.52, lng:102.02, country:'中国'},
+  {name:'玛沁', lat:34.47, lng:100.24, country:'中国'},
+  {name:'玉树', lat:33.00, lng:97.01, country:'中国'},
+  {name:'德令哈', lat:37.37, lng:97.37, country:'中国'},
+  // ── 宁夏 ──
+  {name:'银川', lat:38.49, lng:106.23, country:'中国'},
+  {name:'石嘴山', lat:39.02, lng:106.38, country:'中国'},
+  {name:'吴忠', lat:37.99, lng:106.20, country:'中国'},
+  {name:'固原', lat:36.00, lng:106.29, country:'中国'},
+  {name:'中卫', lat:37.50, lng:105.19, country:'中国'},
+  // ── 新疆 ──
+  {name:'乌鲁木齐', lat:43.83, lng:87.62, country:'中国'},
+  {name:'克拉玛依', lat:45.58, lng:84.89, country:'中国'},
+  {name:'吐鲁番', lat:42.95, lng:89.19, country:'中国'},
+  {name:'哈密', lat:42.82, lng:93.51, country:'中国'},
+  {name:'昌吉', lat:44.01, lng:87.30, country:'中国'},
+  {name:'博乐', lat:44.91, lng:82.07, country:'中国'},
+  {name:'库尔勒', lat:41.76, lng:86.15, country:'中国'},
+  {name:'阿克苏', lat:41.17, lng:80.26, country:'中国'},
+  {name:'阿图什', lat:39.72, lng:76.17, country:'中国'},
+  {name:'喀什', lat:39.47, lng:75.99, country:'中国'},
+  {name:'和田', lat:37.11, lng:79.92, country:'中国'},
+  {name:'伊宁', lat:43.92, lng:81.28, country:'中国'},
+  {name:'塔城', lat:46.75, lng:82.98, country:'中国'},
+  {name:'阿勒泰', lat:47.84, lng:88.14, country:'中国'},
+  {name:'石河子', lat:44.31, lng:86.08, country:'中国'},
+  // ── 港澳台 ──
+  {name:'香港', lat:22.32, lng:114.17, country:'中国香港'},
+  {name:'澳门', lat:22.20, lng:113.55, country:'中国澳门'},
+  {name:'台北', lat:25.03, lng:121.57, country:'中国台湾'},
+  {name:'新北', lat:25.01, lng:121.47, country:'中国台湾'},
+  {name:'桃园', lat:24.99, lng:121.30, country:'中国台湾'},
+  {name:'台中', lat:24.15, lng:120.68, country:'中国台湾'},
+  {name:'台南', lat:22.99, lng:120.21, country:'中国台湾'},
+  {name:'高雄', lat:22.62, lng:120.31, country:'中国台湾'},
+  // ════════ 世界主要国家首都 · 东亚/东南亚 ════════
+  {name:'东京', lat:35.68, lng:139.69, country:'日本'},
+  {name:'首尔', lat:37.57, lng:126.98, country:'韩国'},
+  {name:'平壤', lat:39.03, lng:125.75, country:'朝鲜'},
+  {name:'乌兰巴托', lat:47.89, lng:106.91, country:'蒙古'},
+  {name:'河内', lat:21.03, lng:105.85, country:'越南'},
+  {name:'万象', lat:17.98, lng:102.63, country:'老挝'},
+  {name:'金边', lat:11.56, lng:104.92, country:'柬埔寨'},
+  {name:'曼谷', lat:13.76, lng:100.50, country:'泰国'},
+  {name:'内比都', lat:19.76, lng:96.08, country:'缅甸'},
+  {name:'吉隆坡', lat:3.14, lng:101.69, country:'马来西亚'},
+  {name:'新加坡', lat:1.35, lng:103.82, country:'新加坡'},
+  {name:'雅加达', lat:-6.21, lng:106.85, country:'印度尼西亚'},
+  {name:'马尼拉', lat:14.60, lng:120.98, country:'菲律宾'},
+  {name:'斯里巴加湾市', lat:4.89, lng:114.94, country:'文莱'},
+  {name:'帝力', lat:-8.56, lng:125.56, country:'东帝汶'},
+  // ════════ 南亚/中亚/西亚 ════════
+  {name:'新德里', lat:28.61, lng:77.21, country:'印度'},
+  {name:'伊斯兰堡', lat:33.68, lng:73.05, country:'巴基斯坦'},
+  {name:'达卡', lat:23.81, lng:90.41, country:'孟加拉国'},
+  {name:'科伦坡', lat:6.93, lng:79.86, country:'斯里兰卡'},
+  {name:'加德满都', lat:27.72, lng:85.32, country:'尼泊尔'},
+  {name:'廷布', lat:27.47, lng:89.64, country:'不丹'},
+  {name:'马累', lat:4.18, lng:73.51, country:'马尔代夫'},
+  {name:'喀布尔', lat:34.53, lng:69.17, country:'阿富汗'},
+  {name:'德黑兰', lat:35.69, lng:51.39, country:'伊朗'},
+  {name:'巴格达', lat:33.32, lng:44.36, country:'伊拉克'},
+  {name:'利雅得', lat:24.71, lng:46.68, country:'沙特阿拉伯'},
+  {name:'科威特城', lat:29.38, lng:47.98, country:'科威特'},
+  {name:'多哈', lat:25.29, lng:51.53, country:'卡塔尔'},
+  {name:'阿布扎比', lat:24.45, lng:54.38, country:'阿联酋'},
+  {name:'麦纳麦', lat:26.23, lng:50.59, country:'巴林'},
+  {name:'马斯喀特', lat:23.59, lng:58.41, country:'阿曼'},
+  {name:'萨那', lat:15.35, lng:44.21, country:'也门'},
+  {name:'安曼', lat:31.95, lng:35.93, country:'约旦'},
+  {name:'大马士革', lat:33.51, lng:36.29, country:'叙利亚'},
+  {name:'贝鲁特', lat:33.89, lng:35.50, country:'黎巴嫩'},
+  {name:'特拉维夫', lat:32.07, lng:34.78, country:'以色列'},
+  {name:'安卡拉', lat:39.93, lng:32.86, country:'土耳其'},
+  {name:'尼科西亚', lat:35.17, lng:33.36, country:'塞浦路斯'},
+  {name:'第比利斯', lat:41.72, lng:44.79, country:'格鲁吉亚'},
+  {name:'埃里温', lat:40.18, lng:44.51, country:'亚美尼亚'},
+  {name:'巴库', lat:40.41, lng:49.87, country:'阿塞拜疆'},
+  {name:'阿斯塔纳', lat:51.17, lng:71.45, country:'哈萨克斯坦'},
+  {name:'塔什干', lat:41.30, lng:69.24, country:'乌兹别克斯坦'},
+  {name:'阿什哈巴德', lat:37.95, lng:58.38, country:'土库曼斯坦'},
+  {name:'比什凯克', lat:42.87, lng:74.59, country:'吉尔吉斯斯坦'},
+  {name:'杜尚别', lat:38.56, lng:68.79, country:'塔吉克斯坦'},
+  // ════════ 欧洲 ════════
+  {name:'莫斯科', lat:55.76, lng:37.62, country:'俄罗斯'},
+  {name:'伦敦', lat:51.51, lng:-0.13, country:'英国'},
+  {name:'巴黎', lat:48.86, lng:2.35, country:'法国'},
+  {name:'柏林', lat:52.52, lng:13.40, country:'德国'},
+  {name:'罗马', lat:41.90, lng:12.50, country:'意大利'},
+  {name:'马德里', lat:40.42, lng:-3.70, country:'西班牙'},
+  {name:'里斯本', lat:38.72, lng:-9.14, country:'葡萄牙'},
+  {name:'阿姆斯特丹', lat:52.37, lng:4.90, country:'荷兰'},
+  {name:'布鲁塞尔', lat:50.85, lng:4.35, country:'比利时'},
+  {name:'卢森堡', lat:49.61, lng:6.13, country:'卢森堡'},
+  {name:'维也纳', lat:48.21, lng:16.37, country:'奥地利'},
+  {name:'伯尔尼', lat:46.95, lng:7.45, country:'瑞士'},
+  {name:'布拉格', lat:50.08, lng:14.44, country:'捷克'},
+  {name:'华沙', lat:52.23, lng:21.01, country:'波兰'},
+  {name:'布达佩斯', lat:47.50, lng:19.04, country:'匈牙利'},
+  {name:'布加勒斯特', lat:44.43, lng:26.10, country:'罗马尼亚'},
+  {name:'索非亚', lat:42.70, lng:23.32, country:'保加利亚'},
+  {name:'雅典', lat:37.98, lng:23.73, country:'希腊'},
+  {name:'斯德哥尔摩', lat:59.33, lng:18.07, country:'瑞典'},
+  {name:'奥斯陆', lat:59.91, lng:10.75, country:'挪威'},
+  {name:'哥本哈根', lat:55.68, lng:12.57, country:'丹麦'},
+  {name:'赫尔辛基', lat:60.17, lng:24.94, country:'芬兰'},
+  {name:'雷克雅未克', lat:64.15, lng:-21.94, country:'冰岛'},
+  {name:'都柏林', lat:53.35, lng:-6.26, country:'爱尔兰'},
+  {name:'基辅', lat:50.45, lng:30.52, country:'乌克兰'},
+  {name:'明斯克', lat:53.90, lng:27.57, country:'白俄罗斯'},
+  {name:'里加', lat:56.95, lng:24.11, country:'拉脱维亚'},
+  {name:'维尔纽斯', lat:54.69, lng:25.28, country:'立陶宛'},
+  {name:'塔林', lat:59.44, lng:24.75, country:'爱沙尼亚'},
+  {name:'贝尔格莱德', lat:44.79, lng:20.45, country:'塞尔维亚'},
+  {name:'萨格勒布', lat:45.81, lng:15.98, country:'克罗地亚'},
+  {name:'卢布尔雅那', lat:46.06, lng:14.51, country:'斯洛文尼亚'},
+  {name:'萨拉热窝', lat:43.86, lng:18.41, country:'波黑'},
+  {name:'斯科普里', lat:41.99, lng:21.43, country:'北马其顿'},
+  {name:'地拉那', lat:41.33, lng:19.82, country:'阿尔巴尼亚'},
+  {name:'摩纳哥', lat:43.74, lng:7.42, country:'摩纳哥'},
+  // ════════ 非洲 ════════
+  {name:'开罗', lat:30.04, lng:31.24, country:'埃及'},
+  {name:'的黎波里', lat:32.89, lng:13.19, country:'利比亚'},
+  {name:'突尼斯', lat:36.81, lng:10.18, country:'突尼斯'},
+  {name:'阿尔及尔', lat:36.75, lng:3.06, country:'阿尔及利亚'},
+  {name:'拉巴特', lat:34.02, lng:-6.84, country:'摩洛哥'},
+  {name:'努瓦克肖特', lat:18.08, lng:-15.98, country:'毛里塔尼亚'},
+  {name:'达喀尔', lat:14.72, lng:-17.47, country:'塞内加尔'},
+  {name:'巴马科', lat:12.64, lng:-8.00, country:'马里'},
+  {name:'阿克拉', lat:5.60, lng:-0.19, country:'加纳'},
+  {name:'阿布贾', lat:9.06, lng:7.50, country:'尼日利亚'},
+  {name:'亚的斯亚贝巴', lat:9.01, lng:38.76, country:'埃塞俄比亚'},
+  {name:'内罗毕', lat:-1.29, lng:36.82, country:'肯尼亚'},
+  {name:'坎帕拉', lat:0.35, lng:32.58, country:'乌干达'},
+  {name:'多多马', lat:-6.17, lng:35.74, country:'坦桑尼亚'},
+  {name:'基加利', lat:-1.94, lng:30.06, country:'卢旺达'},
+  {name:'金沙萨', lat:-4.32, lng:15.31, country:'刚果（金）'},
+  {name:'罗安达', lat:-8.84, lng:13.23, country:'安哥拉'},
+  {name:'卢萨卡', lat:-15.39, lng:28.32, country:'赞比亚'},
+  {name:'哈拉雷', lat:-17.83, lng:31.05, country:'津巴布韦'},
+  {name:'马普托', lat:-25.97, lng:32.57, country:'莫桑比克'},
+  {name:'比勒陀利亚', lat:-25.75, lng:28.19, country:'南非'},
+  {name:'温得和克', lat:-22.56, lng:17.08, country:'纳米比亚'},
+  {name:'哈博罗内', lat:-24.63, lng:25.92, country:'博茨瓦纳'},
+  {name:'塔那那利佛', lat:-18.88, lng:47.51, country:'马达加斯加'},
+  {name:'路易港', lat:-20.16, lng:57.50, country:'毛里求斯'},
+  // ════════ 北美洲 ════════
+  {name:'华盛顿', lat:38.91, lng:-77.04, country:'美国'},
+  {name:'渥太华', lat:45.42, lng:-75.70, country:'加拿大'},
+  {name:'墨西哥城', lat:19.43, lng:-99.13, country:'墨西哥'},
+  {name:'哈瓦那', lat:23.11, lng:-82.37, country:'古巴'},
+  {name:'巴拿马城', lat:8.98, lng:-79.52, country:'巴拿马'},
+  {name:'危地马拉城', lat:14.63, lng:-90.51, country:'危地马拉'},
+  {name:'圣何塞', lat:9.93, lng:-84.08, country:'哥斯达黎加'},
+  {name:'金斯敦', lat:17.97, lng:-76.79, country:'牙买加'},
+  // ════════ 南美洲 ════════
+  {name:'波哥大', lat:4.71, lng:-74.07, country:'哥伦比亚'},
+  {name:'加拉加斯', lat:10.49, lng:-66.88, country:'委内瑞拉'},
+  {name:'基多', lat:-0.18, lng:-78.47, country:'厄瓜多尔'},
+  {name:'利马', lat:-12.05, lng:-77.04, country:'秘鲁'},
+  {name:'拉巴斯', lat:-16.50, lng:-68.15, country:'玻利维亚'},
+  {name:'巴西利亚', lat:-15.79, lng:-47.88, country:'巴西'},
+  {name:'亚松森', lat:-25.26, lng:-57.58, country:'巴拉圭'},
+  {name:'蒙得维的亚', lat:-34.90, lng:-56.16, country:'乌拉圭'},
+  {name:'布宜诺斯艾利斯', lat:-34.60, lng:-58.38, country:'阿根廷'},
+  {name:'圣地亚哥', lat:-33.45, lng:-70.67, country:'智利'},
+  // ════════ 大洋洲 ════════
+  {name:'堪培拉', lat:-35.28, lng:149.13, country:'澳大利亚'},
+  {name:'惠灵顿', lat:-41.29, lng:174.78, country:'新西兰'},
+  {name:'苏瓦', lat:-18.14, lng:178.44, country:'斐济'},
+  {name:'莫尔兹比港', lat:-9.44, lng:147.18, country:'巴布亚新几内亚'},
+  // ════════ 世界主要非首都大城市 ════════
+  {name:'纽约', lat:40.71, lng:-74.01, country:'美国'},
+  {name:'洛杉矶', lat:34.05, lng:-118.24, country:'美国'},
+  {name:'旧金山', lat:37.77, lng:-122.42, country:'美国'},
+  {name:'西雅图', lat:47.61, lng:-122.33, country:'美国'},
+  {name:'芝加哥', lat:41.88, lng:-87.63, country:'美国'},
+  {name:'休斯敦', lat:29.76, lng:-95.37, country:'美国'},
+  {name:'多伦多', lat:43.65, lng:-79.38, country:'加拿大'},
+  {name:'温哥华', lat:49.28, lng:-123.12, country:'加拿大'},
+  {name:'圣彼得堡', lat:59.94, lng:30.31, country:'俄罗斯'},
+  {name:'符拉迪沃斯托克', lat:43.12, lng:131.89, country:'俄罗斯'},
+  {name:'大阪', lat:34.69, lng:135.50, country:'日本'},
+  {name:'名古屋', lat:35.18, lng:136.91, country:'日本'},
+  {name:'釜山', lat:35.18, lng:129.08, country:'韩国'},
+  {name:'胡志明市', lat:10.82, lng:106.63, country:'越南'},
+  {name:'孟买', lat:19.08, lng:72.88, country:'印度'},
+  {name:'加尔各答', lat:22.57, lng:88.36, country:'印度'},
+  {name:'伊斯坦布尔', lat:41.01, lng:28.98, country:'土耳其'},
+  {name:'迪拜', lat:25.20, lng:55.27, country:'阿联酋'},
+  {name:'汉堡', lat:53.55, lng:9.99, country:'德国'},
+  {name:'慕尼黑', lat:48.14, lng:11.58, country:'德国'},
+  {name:'米兰', lat:45.46, lng:9.19, country:'意大利'},
+  {name:'巴塞罗那', lat:41.39, lng:2.17, country:'西班牙'},
+  {name:'苏黎世', lat:47.37, lng:8.54, country:'瑞士'},
+  {name:'里约热内卢', lat:-22.91, lng:-43.17, country:'巴西'},
+  {name:'圣保罗', lat:-23.55, lng:-46.63, country:'巴西'},
+  {name:'悉尼', lat:-33.87, lng:151.21, country:'澳大利亚'},
+  {name:'墨尔本', lat:-37.81, lng:144.96, country:'澳大利亚'},
+  {name:'布里斯班', lat:-27.47, lng:153.03, country:'澳大利亚'},
+  {name:'奥克兰', lat:-36.85, lng:174.76, country:'新西兰'},
+  {name:'开普敦', lat:-33.92, lng:18.42, country:'南非'},
+  {name:'约翰内斯堡', lat:-26.20, lng:28.05, country:'南非'},
+  {name:'拉各斯', lat:6.52, lng:3.38, country:'尼日利亚'},
+  {name:'卡萨布兰卡', lat:33.57, lng:-7.59, country:'摩洛哥'},
+  {name:'亚历山大', lat:31.20, lng:29.92, country:'埃及'},
 ];
 const ER = 1.8, SUN_D = 8, TILT = 23.44 * Math.PI / 180;
-const SUN_POS = new THREE.Vector3(7.34, 2.93, -1.27); // 夏至太阳位置（北极圈极昼）
+// ── 四季节太阳位置：直射点纬度 = 太阳赤纬，二至时晨昏线与极圈(66.5°)相切 ──
+// 地轴在世界系中固定为 (0, cosT, sinT)，给定赤纬 δ 需解 sunDir·axis = sinδ 求仰角
+const SUN_R = 8;
+const SUN_AZ = Math.atan2(-1.27, 7.34); // 沿用原夏至的方位角，保证镜头视角不变
+const __k1 = Math.cos(TILT), __k2 = Math.sin(SUN_AZ) * Math.sin(TILT);
+const __R0 = Math.hypot(__k1, __k2), __phi = Math.atan2(__k2, __k1);
+function sunPosFor(declDeg) {
+  const d = declDeg * Math.PI / 180;
+  const e = Math.asin(Math.min(1, Math.max(-1, Math.sin(d) / __R0))) - __phi;
+  return new THREE.Vector3(
+    Math.cos(e) * Math.cos(SUN_AZ) * SUN_R,
+    Math.sin(e) * SUN_R,
+    Math.cos(e) * Math.sin(SUN_AZ) * SUN_R
+  );
+}
+const SEASONS = {
+  chunfen: { label: '春分', decl: 0 },
+  xiazhi:  { label: '夏至', decl: 23.44 },
+  qiufen:  { label: '秋分', decl: 0 },
+  dongzhi: { label: '冬至', decl: -23.44 },
+};
+const sunPosCur = sunPosFor(23.44);    // 初始夏至（动画中平滑过渡的当前值）
+const sunPosTarget = sunPosCur.clone(); // 切换季节后的目标值
+const SUN_POS = sunPosCur;              // 兼容既有引用（太阳网格/辉光初始位置）
 
 // ── Texture helpers ────────────────────────────────────────
 function loadImgEl(id) {
@@ -237,6 +751,18 @@ function loadImgEl(id) {
   if (!el) return Promise.reject('no element');
   if (el.complete && el.naturalWidth > 0) return Promise.resolve(el);
   return el.decode().then(() => el).catch(() => null);
+}
+// 优先从内嵌 data URI 取纹理（file:// 下 <img> 上传 WebGL 会被 Chrome 拦截），
+// 无内嵌文件时回退到 <img> 方式（http(s) 或本地服务器场景）
+function loadEmbed(key, fallbackId) {
+  const src = window.TEX_EMBED && window.TEX_EMBED[key];
+  if (!src) return fallbackId ? loadImgEl(fallbackId) : Promise.reject('no embed');
+  const im = new Image();
+  return new Promise((res, rej) => {
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error('embed decode failed: ' + key));
+    im.src = src;
+  });
 }
 function fallbackTex(color) {
   const c = document.createElement('canvas'); c.width = 4; c.height = 4;
@@ -276,8 +802,8 @@ const earthFS = `
     texColor = pow(texColor, vec3(0.8));
     float specVal = texture(specTex, vUv).r;
 
-    // Day side
-    vec3 dayCol = texColor * (1.05 + 0.3 * specVal);
+    // Day side（1.35 基础增益 + 海面高光 0.4）
+    vec3 dayCol = texColor * (1.35 + 0.4 * specVal);
 
     // Night side
     vec3 nightColOut = nightCol + texColor * 0.035;
@@ -356,6 +882,7 @@ try {
   });
   const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 64, 48), sunMat);
   sunMesh.position.copy(SUN_POS); scene.add(sunMesh);
+  const sunObjects = [sunMesh]; // 季节切换时统一平移的太阳系物体
 
   // Sun glow canvas
   function makeGlow(rgba, sz, op) {
@@ -372,9 +899,10 @@ try {
     }));
     s.scale.set(sz, sz, 1); s.position.copy(SUN_POS); return s;
   }
-  scene.add(makeGlow('rgba(255,220,80,1)', 6, 0.4));
-  scene.add(makeGlow('rgba(255,180,50,1)', 12, 0.22));
-  scene.add(makeGlow('rgba(255,120,30,1)', 20, 0.08));
+  sunObjects.push(makeGlow('rgba(255,220,80,1)', 6, 0.4));
+  sunObjects.push(makeGlow('rgba(255,180,50,1)', 12, 0.22));
+  sunObjects.push(makeGlow('rgba(255,120,30,1)', 20, 0.08));
+  scene.add(sunObjects[1], sunObjects[2], sunObjects[3]);
 
   // Sun rays
   const rc = document.createElement('canvas'); rc.width = 128; rc.height = 128;
@@ -390,9 +918,30 @@ try {
     map: new THREE.CanvasTexture(rc), blending: THREE.AdditiveBlending,
     transparent: true, depthWrite: false, opacity: 0.5
   }));
-  rs.scale.set(28, 28, 1); rs.position.copy(SUN_POS); scene.add(rs);
+  rs.scale.set(28, 28, 1); rs.position.copy(SUN_POS); scene.add(rs); sunObjects.push(rs);
 
   scene.add(new THREE.AmbientLight(0x111133, 0.08));
+
+  // ── Starfield（远景星点，尺寸/亮度/色温随机）──
+  {
+    const N = 1600, pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+    const v = new THREE.Vector3();
+    for (let i = 0; i < N; i++) {
+      v.randomDirection().multiplyScalar(40 + Math.random() * 35);
+      pos[i*3] = v.x; pos[i*3+1] = v.y; pos[i*3+2] = v.z;
+      const b = 0.3 + Math.random() * 0.7, tint = Math.random();
+      col[i*3]   = b * (tint > 0.8 ? 1.0 : 0.88);
+      col[i*3+1] = b * 0.92;
+      col[i*3+2] = b * (tint < 0.2 ? 1.0 : 0.98);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    scene.add(new THREE.Points(g, new THREE.PointsMaterial({
+      size: 0.14, vertexColors: true, sizeAttenuation: true,
+      transparent: true, opacity: 0.9, depthWrite: false
+    })));
+  }
 
   // ── Earth ──────────────────────────────────────────────────
   axisGroup = new THREE.Group(); axisGroup.rotation.x = TILT; scene.add(axisGroup);
@@ -536,7 +1085,18 @@ try {
 
     document.getElementById(`ct-${id}`).addEventListener('click', e => { e.stopPropagation(); toggleCityVisibility(id); });
     document.getElementById(`cdel-${id}`).addEventListener('click', e => { e.stopPropagation(); removeCityById(id); });
+    saveCities();
     return id;
+  }
+
+  // ── City persistence（localStorage，file:// 下也可用，失败则静默降级）──
+  const LS_KEY = 'earthDemoCities';
+  function saveCities() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(
+        cityData.map(d => ({ name: d.city.name, lat: d.city.lat, lng: d.city.lng, country: d.city.country, visible: d.visible }))
+      ));
+    } catch (e) { /* ignore */ }
   }
 
   function removeCityById(id) {
@@ -552,6 +1112,7 @@ try {
     cityData.splice(idx, 1);
     const item = document.getElementById(`ci-${id}`);
     if (item) item.remove();
+    saveCities();
   }
 
   function toggleCityVisibility(id) {
@@ -559,14 +1120,21 @@ try {
     if (!d) return;
     d.visible = !d.visible;
     document.getElementById(`ct-${id}`)?.classList.toggle('off', !d.visible);
+    saveCities();
   }
 
-  // Add initial preset cities (hidden by default)
-  INITIAL_CITIES.forEach(c => {
+  // Add cities（localStorage 优先，无存档时用预设且默认隐藏）
+  let savedCities = null;
+  try { savedCities = JSON.parse(localStorage.getItem(LS_KEY)); } catch (e) { /* ignore */ }
+  const citySeed = (Array.isArray(savedCities) && savedCities.length) ? savedCities
+    : INITIAL_CITIES.map(c => ({ ...c, visible: false }));
+  citySeed.forEach(c => {
     const id = addCityToScene(c);
-    // Start hidden
     const d = cityData.find(x => x.id === id);
-    if (d) { d.visible = false; document.getElementById(`ct-${id}`)?.classList.add('off'); }
+    if (d && c.visible !== true) {
+      d.visible = false;
+      document.getElementById(`ct-${id}`)?.classList.add('off');
+    }
   });
 
   // ── City panel toggle ──────────────────────────────────────
@@ -581,7 +1149,15 @@ try {
     this.innerHTML = masterVisible ?
       '📍 城市 · 搜索添加 <span style="float:right">▼</span>' :
       '📍 城市 · 点击展开 <span style="float:right">▶</span>';
+    saveCities();
   });
+
+  // 面板初始状态与存档中的城市可见性保持一致
+  masterVisible = cityData.some(d => d.visible);
+  if (masterVisible) {
+    document.getElementById('cpBody').style.display = 'block';
+    document.getElementById('cpToggle').innerHTML = '📍 城市 · 搜索添加 <span style="float:right">▼</span>';
+  }
 
   // ── City search ────────────────────────────────────────────
   const citySearchEl = document.getElementById('citySearch');
@@ -594,9 +1170,9 @@ try {
     searchTimer = setTimeout(() => {
       const ql = q.toLowerCase();
       const matches = CITY_DB.filter(c => c.name.toLowerCase().includes(ql) || c.country.toLowerCase().includes(ql)).slice(0, 8);
-      const addedNames = new Set(cityData.map(d => d.city.name));
+      const addedKeys = new Set(cityData.map(d => d.city.name + '|' + d.city.country));
       citySearchResultEl.innerHTML = matches.map(c => {
-        const already = addedNames.has(c.name);
+        const already = addedKeys.has(c.name + '|' + c.country);
         return `<div class="city-sr"><span>${c.name} <small>${c.country}</small></span>${
           already ? '<span style="color:rgba(255,255,255,.2);font-size:11px">已添加</span>' :
           `<button data-name="${c.name}" data-lat="${c.lat}" data-lng="${c.lng}" data-country="${c.country}">+ 添加</button>`
@@ -612,6 +1188,31 @@ try {
       });
     }, 200);
   });
+
+  // ── Season switch + sun info panel ────────────────────────
+  function updateInfoBox() {
+    const el = document.getElementById('sunInfo');
+    if (!el) return;
+    // 直射纬度 = 太阳方向与地轴（世界坐标）夹角的正弦
+    const axisW = new THREE.Vector3(0, 1, 0).applyQuaternion(axisGroup.quaternion);
+    const decl = THREE.MathUtils.radToDeg(Math.asin(
+      THREE.MathUtils.clamp(uniforms.sunDir.value.dot(axisW), -1, 1)));
+    let label = SEASONS.xiazhi.label, best = 99;
+    Object.values(SEASONS).forEach(s => {
+      const d = Math.abs(s.decl - decl);
+      if (d < best) { best = d; label = s.label; }
+    });
+    const ns = decl >= 0 ? 'N' : 'S';
+    el.innerHTML = `季节：<strong class="hl">${label}</strong> · 太阳直射 <strong class="hl">${Math.abs(decl).toFixed(1)}°${ns}</strong>`;
+  }
+  function setSeason(key) {
+    const s = SEASONS[key]; if (!s) return;
+    sunPosTarget.copy(sunPosFor(s.decl));
+    document.querySelectorAll('.seasBtn').forEach(b => b.classList.toggle('active', b.dataset.seas === key));
+    updateInfoBox();
+  }
+  document.querySelectorAll('.seasBtn').forEach(b => b.addEventListener('click', () => setSeason(b.dataset.seas)));
+  setSeason('xiazhi'); // 初始夏至
 
   document.getElementById('npBtn').addEventListener('click', () => focusPole(true));
   document.getElementById('spBtn').addEventListener('click', () => focusPole(false));
@@ -735,9 +1336,9 @@ try {
   (async () => {
     try {
       const [earthImg, specImg, sunImg] = await Promise.all([
-        loadImgEl('texEarthDay').catch(()=>null),
-        loadImgEl('texEarthSpec').catch(()=>null),
-        loadImgEl('texSun').catch(()=>null),
+        loadEmbed('earthDay', 'texEarthDay').catch(()=>null),
+        loadEmbed('earthSpec', 'texEarthSpec').catch(()=>null),
+        loadEmbed('sun', 'texSun').catch(()=>null),
       ]);
       console.log('tex: earth=%s spec=%s sun=%s',
         earthImg?'✅':'❌', specImg?'✅':'❌', sunImg?'✅':'❌');
@@ -767,12 +1368,20 @@ try {
     requestAnimationFrame(animate);
     const dt = clock.getDelta(), t = performance.now() / 1000;
 
+    // 季节切换：太阳位置平滑过渡（暂停时也可切换，便于定格讲解）
+    if (!sunPosCur.equals(sunPosTarget)) {
+      sunPosCur.lerp(sunPosTarget, 1 - Math.exp(-dt * 3.5));
+      if (sunPosCur.distanceTo(sunPosTarget) < 0.002) sunPosCur.copy(sunPosTarget);
+      uniforms.sunDir.value.copy(sunPosCur).normalize();
+      sunObjects.forEach(o => o.position.copy(sunPosCur));
+    }
+
     if (!paused) {
       spinGroup.rotation.y += BASE_SPEED * speedMul * dt * rotDir;
     }
 
     if (!cityData._lu || t - cityData._lu > 0.2) {
-      updateCities(); cityData._lu = t;
+      updateCities(); updateInfoBox(); cityData._lu = t;
     }
 
     cityData.forEach(d => {
