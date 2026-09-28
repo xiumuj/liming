@@ -166,6 +166,8 @@ const INITIAL_CITIES = [
   {name:'悉尼', lat:-33.9, lng:151.2, country:'澳大利亚'},
   {name:'伦敦', lat:51.5, lng:-0.1,  country:'英国'},
   {name:'纽约', lat:40.7, lng:-74.0, country:'美国'},
+  {name:'深圳', lat:22.54, lng:114.06, country:'中国', visible:true},
+  {name:'莫斯科', lat:55.76, lng:37.62, country:'俄罗斯', visible:true},
 ];
 
 const CITY_DB = [
@@ -1127,8 +1129,18 @@ try {
   let savedCities = null;
   try { savedCities = JSON.parse(localStorage.getItem(LS_KEY)); } catch (e) { /* ignore */ }
   const citySeed = (Array.isArray(savedCities) && savedCities.length) ? savedCities
-    : INITIAL_CITIES.map(c => ({ ...c, visible: false }));
+    : INITIAL_CITIES.map(c => ({ ...c, visible: c.visible === true }));
   citySeed.forEach(c => {
+    const id = addCityToScene(c);
+    const d = cityData.find(x => x.id === id);
+    if (d && c.visible !== true) {
+      d.visible = false;
+      document.getElementById(`ct-${id}`)?.classList.add('off');
+    }
+  });
+  // 新增默认城市合并进旧存档：localStorage 里没有的预设城市补进去
+  INITIAL_CITIES.forEach(c => {
+    if (cityData.some(d => d.city.name === c.name && d.city.country === c.country)) return;
     const id = addCityToScene(c);
     const d = cityData.find(x => x.id === id);
     if (d && c.visible !== true) {
