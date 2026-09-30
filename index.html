@@ -1164,13 +1164,6 @@ try {
     saveCities();
   });
 
-  // 面板初始状态与存档中的城市可见性保持一致
-  masterVisible = cityData.some(d => d.visible);
-  if (masterVisible) {
-    document.getElementById('cpBody').style.display = 'block';
-    document.getElementById('cpToggle').innerHTML = '📍 城市 · 搜索添加 <span style="float:right">▼</span>';
-  }
-
   // ── City search ────────────────────────────────────────────
   const citySearchEl = document.getElementById('citySearch');
   const citySearchResultEl = document.getElementById('citySearchResult');
