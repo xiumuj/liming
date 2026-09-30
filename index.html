@@ -166,8 +166,8 @@ const INITIAL_CITIES = [
   {name:'悉尼', lat:-33.9, lng:151.2, country:'澳大利亚'},
   {name:'伦敦', lat:51.5, lng:-0.1,  country:'英国'},
   {name:'纽约', lat:40.7, lng:-74.0, country:'美国'},
-  {name:'深圳', lat:22.54, lng:114.06, country:'中国', visible:true},
-  {name:'莫斯科', lat:55.76, lng:37.62, country:'俄罗斯', visible:true},
+  {name:'深圳', lat:22.54, lng:114.06, country:'中国'},
+  {name:'莫斯科', lat:55.76, lng:37.62, country:'俄罗斯'},
 ];
 
 const CITY_DB = [
@@ -1147,6 +1147,11 @@ try {
       d.visible = false;
       document.getElementById(`ct-${id}`)?.classList.add('off');
     }
+  });
+  // 面板默认折叠：初始一律隐藏所有城市标记（点击展开后由总开关控制，也覆盖旧存档的 visible 残留）
+  cityData.forEach(d => {
+    d.visible = false;
+    document.getElementById(`ct-${d.id}`)?.classList.add('off');
   });
 
   // ── City panel toggle ──────────────────────────────────────
