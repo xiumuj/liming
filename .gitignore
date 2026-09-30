@@ -1,0 +1,9 @@
+# 单文件分发版（由 index.html + textures.embed.js 生成，不入库）
+earth-demo-standalone.html
+
+# 临时验证产物
+_check*.png
+_b.html
+_bright*.html
+_citydb.tmp.js
+_splice.py
