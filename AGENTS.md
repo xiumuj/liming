@@ -38,6 +38,7 @@ scene
 ## 新增功能
 - **云层已移除**（2026-09-28）：曾短暂加入后应需求撤下，`textures/earth_clouds_1024.png` 已转为 L 灰度模式但未被引用。若将来恢复云层，注意老版 three.js 云贴图多为 P 模式（RGB 恒白、形状在 alpha 通道），自定义 shader 不能直接取 `.r` 当密度。
 - **大气辉光壳已移除**（2026-09-28）：Fresnel BackSide 外壳曾加入后应需求撤下；地表 shader 内部残留的轻微 rim（`* 0.04`）保留，不影响轮廓。
+- **视角锁定**（2026-09-30）：`viewLocked=true` 默认锁死相机（`controls.enabled=false`），禁用手动转动/缩放，城市/极点聚焦也被忽略；右下按钮是切换开关——"🔓 解除锁定"→解锁并可手动操作，"⟲ 重置视角"→相机与地球朝向复位到初始状态并重新锁定。
 - **星空**：1600 点 `THREE.Points`，半径 40–75 随机球壳。
 - **直射点面板**：`#sunInfo` 每 200ms 由实际 `sunDir·axisW` 反算直射纬度并匹配最近季节标签。
 - **城市记忆**：`localStorage['earthDemoCities']` 存 `{name,lat,lng,country,visible}`；加载时存档优先于 `INITIAL_CITIES`；增删/显隐/总开关均触发 `saveCities()`。file:// 下 localStorage 不可用时静默降级。

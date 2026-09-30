@@ -106,7 +106,7 @@ canvas{display:block}
   </div>
   <button id="npBtn">⬆ 北极</button>
   <button id="spBtn">⬇ 南极</button>
-  <button id="resetBtn">⟲ 重置视角</button>
+  <button id="resetBtn">🔓 解除锁定</button>
 </div>
 
 <div id="cityPanel">
@@ -835,6 +835,7 @@ const earthFS = `
 let scene, camera, renderer, controls, axisGroup, spinGroup, uniforms;
 let cityData = [], cityClick = [];
 let paused = false, speedMul = 0.1, rotDir = 1;
+let viewLocked = true; // 视角锁定：默认锁在初始位置，禁用手动转动
 const BASE_SPEED = 0.6;
 const clock = new THREE.Clock();
 
@@ -858,6 +859,7 @@ try {
   controls.enableDamping = true; controls.dampingFactor = 0.08;
   controls.minDistance = 2.6; controls.maxDistance = 14;
   controls.target.set(0, 0, 0); controls.update();
+  controls.enabled = false; // 默认锁定视角
 
   // ── Sun ──
   function makeSunTex() {
@@ -1229,6 +1231,7 @@ try {
 
   // ── Focus city ─────────────────────────────────────────────
   function focusCityById(id) {
+    if (viewLocked) return; // 视角锁定时忽略聚焦
     const d = cityData.find(c => c.id === id);
     if (!d) return;
     const wp = new THREE.Vector3();
@@ -1251,6 +1254,7 @@ try {
 
   // ── Focus pole ─────────────────────────────────────────────
   function focusPole(isNorth) {
+    if (viewLocked) return; // 视角锁定时忽略聚焦
     const temp = new THREE.Object3D();
     temp.position.set(0, isNorth ? ER : -ER, 0);
     spinGroup.add(temp);
@@ -1432,12 +1436,22 @@ try {
     this.textContent = rotDir === 1 ? '↺ 自西向东' : '↻ 自东向西';
     this.classList.toggle('active', rotDir === -1);
   });
-  document.getElementById('resetBtn').addEventListener('click', () => {
-    camera.position.set(0, 0.5, 5.9);
-    controls.target.set(0,0,0); controls.update();
-    spinGroup.rotation.y = 2.618;
-    document.querySelectorAll('.ci').forEach(el => el.style.background = '');
-    document.querySelectorAll('#npBtn,#spBtn').forEach(el => el.classList.remove('active'));
+  // 视角锁定开关：锁定 ⇄ 解锁/重置
+  const resetBtn = document.getElementById('resetBtn');
+  resetBtn.addEventListener('click', () => {
+    viewLocked = !viewLocked;
+    controls.enabled = !viewLocked;
+    if (viewLocked) {
+      // 重新锁定：视角与地球朝向复位到初始状态
+      camera.position.set(0, 0.5, 5.9);
+      controls.target.set(0,0,0); controls.update();
+      spinGroup.rotation.y = 2.618;
+      document.querySelectorAll('.ci').forEach(el => el.style.background = '');
+      document.querySelectorAll('#npBtn,#spBtn').forEach(el => el.classList.remove('active'));
+      resetBtn.textContent = '🔓 解除锁定';
+    } else {
+      resetBtn.textContent = '⟲ 重置视角';
+    }
   });
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
