@@ -725,16 +725,14 @@ const ER = 1.8, SUN_D = 8, TILT = 23.44 * Math.PI / 180;
 // ── 四季节太阳位置：直射点纬度 = 太阳赤纬，二至时晨昏线与极圈(66.5°)相切 ──
 // 地轴在世界系中固定为 (0, cosT, sinT)，给定赤纬 δ 需解 sunDir·axis = sinδ 求仰角
 const SUN_R = 8;
-const SUN_AZ = Math.atan2(-1.27, 7.34); // 沿用原夏至的方位角，保证镜头视角不变
-const __k1 = Math.cos(TILT), __k2 = Math.sin(SUN_AZ) * Math.sin(TILT);
-const __R0 = Math.hypot(__k1, __k2), __phi = Math.atan2(__k2, __k1);
+// 太阳方向在地球坐标系（以地轴为 Y）内沿固定经线（λ=0）随赤纬移动，再叠加地轴倾角 Rx(TILT) 变换到世界系。
+// 保证 δ 变化时直射点沿同一条经线移动，晨昏线始终绕其与赤道的两个交点（地方时 6:00/18:00，固定）旋转。
 function sunPosFor(declDeg) {
   const d = declDeg * Math.PI / 180;
-  const e = Math.asin(Math.min(1, Math.max(-1, Math.sin(d) / __R0))) - __phi;
   return new THREE.Vector3(
-    Math.cos(e) * Math.cos(SUN_AZ) * SUN_R,
-    Math.sin(e) * SUN_R,
-    Math.cos(e) * Math.sin(SUN_AZ) * SUN_R
+    Math.cos(d) * SUN_R,
+    Math.sin(d) * Math.cos(TILT) * SUN_R,
+    Math.sin(d) * Math.sin(TILT) * SUN_R
   );
 }
 const SEASONS = {
@@ -743,9 +741,8 @@ const SEASONS = {
   qiufen:  { label: '秋分', decl: 0 },
   dongzhi: { label: '冬至', decl: -23.44 },
 };
-const sunPosCur = sunPosFor(23.44);    // 初始夏至（动画中平滑过渡的当前值）
-const sunPosTarget = sunPosCur.clone(); // 切换季节后的目标值
-const SUN_POS = sunPosCur;              // 兼容既有引用（太阳网格/辉光初始位置）
+let declCur = 23.44, declTarget = 23.44; // 当前/目标赤纬（过渡动画插值用），初始夏至
+const SUN_POS = sunPosFor(declCur);      // 兼容既有引用（太阳网格/辉光初始位置）
 
 // ── Texture helpers ────────────────────────────────────────
 function loadImgEl(id) {
@@ -1219,7 +1216,7 @@ try {
   }
   function setSeason(key) {
     const s = SEASONS[key]; if (!s) return;
-    sunPosTarget.copy(sunPosFor(s.decl));
+    declTarget = s.decl;
     document.querySelectorAll('.seasBtn').forEach(b => b.classList.toggle('active', b.dataset.seas === key));
     updateInfoBox();
   }
@@ -1383,11 +1380,12 @@ try {
     const dt = clock.getDelta(), t = performance.now() / 1000;
 
     // 季节切换：太阳位置平滑过渡（暂停时也可切换，便于定格讲解）
-    if (!sunPosCur.equals(sunPosTarget)) {
-      sunPosCur.lerp(sunPosTarget, 1 - Math.exp(-dt * 3.5));
-      if (sunPosCur.distanceTo(sunPosTarget) < 0.002) sunPosCur.copy(sunPosTarget);
-      uniforms.sunDir.value.copy(sunPosCur).normalize();
-      sunObjects.forEach(o => o.position.copy(sunPosCur));
+    if (declCur !== declTarget) {
+      declCur += (declTarget - declCur) * (1 - Math.exp(-dt * 3.5));
+      if (Math.abs(declTarget - declCur) < 0.01) declCur = declTarget;
+      const sp = sunPosFor(declCur);
+      uniforms.sunDir.value.copy(sp).normalize();
+      sunObjects.forEach(o => o.position.copy(sp));
     }
 
     if (!paused) {
