@@ -62,8 +62,10 @@ canvas{display:block}
 #errMsg .rb{margin-top:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:8px 24px;border-radius:8px;cursor:pointer;font-size:14px;font-family:inherit;transition:.2s}
 #errMsg .rb:hover{background:rgba(255,255,255,.2)}
 @media(min-width:721px) and (max-width:1440px){
-#topBar{max-width:calc(100vw - 32px);flex-wrap:wrap;justify-content:center}
-#infoBox{bottom:90px;max-width:none;padding:8px 14px;white-space:nowrap}
+#topBar{left:200px;transform:none;gap:8px;padding:6px 10px}
+#topBar button{padding:4px 10px}
+#topBar input[type=range]{width:52px}
+#infoBox{top:16px;left:16px;right:auto;bottom:auto;max-width:none;padding:8px 14px;white-space:nowrap}
 #infoBox .disc{display:none}
 }
 @media(max-width:720px){
