@@ -61,6 +61,11 @@ canvas{display:block}
 #errMsg p{color:rgba(255,255,255,.55);font-size:13px;line-height:1.6}
 #errMsg .rb{margin-top:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:8px 24px;border-radius:8px;cursor:pointer;font-size:14px;font-family:inherit;transition:.2s}
 #errMsg .rb:hover{background:rgba(255,255,255,.2)}
+@media(min-width:721px) and (max-width:1100px){
+#topBar{max-width:calc(100vw - 32px);flex-wrap:wrap;justify-content:center}
+#infoBox{bottom:90px;max-width:none;padding:8px 14px;white-space:nowrap}
+#infoBox .disc{display:none}
+}
 @media(max-width:720px){
 #topBar{bottom:12px;padding:6px 12px;gap:8px;flex-wrap:wrap;justify-content:center}
 #topBar h1{font-size:13px}
@@ -120,7 +125,7 @@ canvas{display:block}
 
 <div id="infoBox">
   <div id="sunInfo">…</div>
-  <div style="margin-top:6px;opacity:.55">本模型不代表天体大小和距离的实际比例关系</div>
+  <div class="disc" style="margin-top:6px;opacity:.55">本模型不代表天体大小和距离的实际比例关系</div>
 </div>
 
 <!-- 内嵌纹理（base64 data URI）：file:// 双击打开时绕过跨域限制，保证 WebGL 纹理可上传 -->
