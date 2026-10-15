@@ -160,6 +160,8 @@ const INITIAL_CITIES = [
   {name:'北京', lat:39.9, lng:116.4, country:'中国'},
   {name:'上海', lat:31.2, lng:121.5, country:'中国'},
   {name:'乌鲁木齐', lat:43.8, lng:87.6, country:'中国'},
+  {name:'拉萨', lat:29.65, lng:91.1, country:'中国'},
+  {name:'成都', lat:30.57, lng:104.07, country:'中国'},
   {name:'东京', lat:35.7, lng:139.7, country:'日本'},
   {name:'深圳', lat:22.54, lng:114.06, country:'中国'},
   {name:'莫斯科', lat:55.76, lng:37.62, country:'俄罗斯'},
@@ -247,6 +249,7 @@ const CITY_DB = [
   {name:'黑河', lat:50.25, lng:127.53, country:'中国'},
   {name:'绥化', lat:46.65, lng:126.99, country:'中国'},
   {name:'大兴安岭', lat:50.42, lng:124.12, country:'中国'},
+  {name:'抚远', lat:48.37, lng:134.29, country:'中国'},   // 县级市（佳木斯代管），中国最东端
   // ── 江苏 ──
   {name:'南京', lat:32.06, lng:118.80, country:'中国'},
   {name:'无锡', lat:31.49, lng:120.31, country:'中国'},
@@ -273,6 +276,7 @@ const CITY_DB = [
   {name:'舟山', lat:29.99, lng:122.21, country:'中国'},
   {name:'台州', lat:28.66, lng:121.42, country:'中国'},
   {name:'丽水', lat:28.47, lng:119.92, country:'中国'},
+  {name:'温岭', lat:28.37, lng:121.37, country:'中国'},   // 县级市（台州代管）
   // ── 安徽 ──
   {name:'合肥', lat:31.82, lng:117.23, country:'中国'},
   {name:'芜湖', lat:31.35, lng:118.43, country:'中国'},
@@ -1026,6 +1030,9 @@ try {
     );
   }
   const DOT_R = 0.035;
+  // 城市标签中心的离地高度（世界单位）。标签是朝相机的 Sprite，偏移越大，
+  // 斜视角下屏幕位移越大（城市靠近边缘时最明显）——压低到刚好浮在城市点上方即可。
+  const LABEL_LIFT = 0.13;
   const cityListEl = document.getElementById('cityList');
 
   // ── Dynamic city management ────────────────────────────────
@@ -1055,7 +1062,7 @@ try {
     const lbl = new THREE.Sprite(new THREE.SpriteMaterial({
       map: new THREE.CanvasTexture(lc), transparent:true, depthWrite:false, opacity:0.9
     }));
-    lbl.position.copy(pos.clone().multiplyScalar(1.24));
+    lbl.position.copy(pos).normalize().multiplyScalar(ER + LABEL_LIFT);
     lbl.scale.set(0.7, 0.168, 1); spinGroup.add(lbl);
 
     const entry = {
@@ -1090,7 +1097,7 @@ try {
   const LS_KEY = 'earthDemoCitiesSimple';
   // 默认城市集合每变更一次就 +1：与存档上的标记不一致时丢弃旧存档、按最新预设重建，
   // 否则旧存档里已被移除的默认城市（悉尼/纽约/伦敦/广州/中山）会随存档回到面板上
-  const SEED_VERSION = 2;
+  const SEED_VERSION = 3;
   const SEED_KEY = LS_KEY + '.seed';
   function saveCities() {
     try {
