@@ -826,7 +826,7 @@ const earthFS = `
 // ── Scene ──────────────────────────────────────────────────
 let scene, camera, renderer, controls, axisGroup, spinGroup, uniforms;
 let cityData = [], cityClick = [];
-let paused = false, speedMul = 0.3, rotDir = 1;
+let paused = false, speedMul = 0.1, rotDir = 1;
 let viewLocked = true; // 视角锁定：默认锁在初始位置，禁用手动转动
 const BASE_SPEED = 0.6;
 const clock = new THREE.Clock();
@@ -1419,7 +1419,7 @@ try {
   animate();
 
   // ── UI ────────────────────────────────────────────────────
-  // 速度固定为 0.3×（speedMul 已固定），不再提供调速控件
+  // 速度固定为 0.1×（speedMul 已固定），不再提供调速控件
   document.getElementById('pauseBtn').addEventListener('click', function() {
     paused = !paused;
     this.textContent = paused ? '▶ 播放' : '⏸ 暂停';
