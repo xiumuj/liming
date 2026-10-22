@@ -1306,13 +1306,13 @@ try {
     spinGroup.getWorldQuaternion(_q);
     return _axis.set(0, 1, 0).applyQuaternion(_q).normalize();
   }
-  function compStatus(sd, n) {
+  function compStatus(sd, n, lh) {
     const ca = n.dot(sd);
-    const rate = new THREE.Vector3().crossVectors(n, sd).dot(spinAxis()) * rotDir;
     if (ca > 0.12) return 'day';
-    if (ca > 0) return rate > 0 ? 'day' : 'dusk';
-    if (ca > -0.12) return rate > 0 ? 'dawn' : 'night';
-    return 'night';
+    if (ca < -0.12) return 'night';
+    // 晨昏过渡带：直接按「表盘上显示的小时」判断，保证标签与旁边的时刻自洽，
+    // 也不依赖转动方向（自东向西时表盘已镜像，黎明/黄昏自然互换）。
+    return lh < 12 ? 'dawn' : 'dusk';
   }
   // 地方真太阳时：直接把城市法线与太阳方向投到赤道面，取带符号夹角 /15。
   // 不依赖贴图经度约定，结果必然与画面上的光照一致。
@@ -1335,11 +1335,16 @@ try {
     cityData.forEach(d => {
       if (!d.visible) return;
       d.dot.getWorldPosition(_tmpN).normalize();
-      const st = compStatus(sd, _tmpN); d._st = st;
+      // 两套时间系统：
+      //   自西向东 —— 正常太阳时（黎明在 5~6 点）
+      //   自东向西 —— 整套镜像 t' = 24 − t，同一画面配置下 6:00 变 18:00（黄昏），
+      //              且因为几何小时在倒退，镜像后仍在正向流逝，不会出现时光倒流。
+      let lh = solarHour(sd, _tmpN);
+      if (rotDir === -1) lh = (24 - lh) % 24;
+      const st = compStatus(sd, _tmpN, lh); d._st = st;
       const de = document.getElementById(`cd-${d.id}`);
       if (de) de.className = `cd ${st}`;
 
-      const lh = solarHour(sd, _tmpN);
       const hh = Math.floor(lh), mm = Math.floor((lh-hh)*60);
       const ts = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
       const span = document.getElementById(`cs-${d.id}`);
