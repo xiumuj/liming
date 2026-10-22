@@ -109,7 +109,7 @@ canvas{display:block}
 
 <div id="topBar">
   <div class="cap c-dir">
-    <button id="dirBtn" class="dirBtn"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 8a5.4 5.4 0 1 1 1.7 3.9"/><path d="M2.6 4.4V8h3.6"/></svg><span>自西向东</span></button>
+    <button id="dirBtn" class="dirBtn"><svg id="dirIco" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 5 2 11 8 11"/><path d="M4.6 16a8.5 8.5 0 1 0 2-8.8L2 11"/></svg><span>自西向东</span></button>
   </div>
   <div class="cap c-season">
     <button class="seasBtn" data-seas="chunfen">春分</button>
@@ -1296,24 +1296,37 @@ try {
   });
 
   // ── Status computation ────────────────────────────────────
-  function compStatus(sd, d) {
-    const wp = new THREE.Vector3();
-    d.dot.getWorldPosition(wp);
-    const n = wp.normalize(), ca = n.dot(sd);
-    // Use local tangent rotation in world space to detect morning/evening
-    const localPos = d.pos.clone();
-    const eps = 0.005;
-    const rxLocal = new THREE.Vector3(
-      localPos.x*Math.cos(eps)-localPos.z*Math.sin(eps),
-      localPos.y,
-      localPos.x*Math.sin(eps)+localPos.z*Math.cos(eps)
-    );
-    const rxWorld = rxLocal.clone().applyMatrix4(d.dot.matrixWorld).normalize();
-    const toward = rxWorld.dot(sd) > ca;
+  // 黎明/黄昏不能写死方向：光照变化率 d(n·sd)/dt = (ω×n)·sd = ω·(n×sd)
+  //   >0 光照增强 → 正走向白昼（黎明侧）；<0 光照减弱 → 正走向黑夜（黄昏侧）
+  // ω = 自转轴 × rotDir，所以「自西向东 / 自东向西」两个方向都成立。
+  const _q = new THREE.Quaternion();
+  const _axis = new THREE.Vector3();
+  const _tmpN = new THREE.Vector3();
+  function spinAxis() {
+    spinGroup.getWorldQuaternion(_q);
+    return _axis.set(0, 1, 0).applyQuaternion(_q).normalize();
+  }
+  function compStatus(sd, n) {
+    const ca = n.dot(sd);
+    const rate = new THREE.Vector3().crossVectors(n, sd).dot(spinAxis()) * rotDir;
     if (ca > 0.12) return 'day';
-    if (ca > 0) return toward ? 'day' : 'dusk';
-    if (ca > -0.12) return toward ? 'dawn' : 'night';
+    if (ca > 0) return rate > 0 ? 'day' : 'dusk';
+    if (ca > -0.12) return rate > 0 ? 'dawn' : 'night';
     return 'night';
+  }
+  // 地方真太阳时：直接把城市法线与太阳方向投到赤道面，取带符号夹角 /15。
+  // 不依赖贴图经度约定，结果必然与画面上的光照一致。
+  function solarHour(sd, n) {
+    const axis = spinAxis();
+    const np = n.clone().projectOnPlane(axis);
+    const sp = sd.clone().projectOnPlane(axis);
+    if (np.lengthSq() < 1e-8 || sp.lengthSq() < 1e-8) return 12;
+    np.normalize(); sp.normalize();
+    const ang = Math.acos(Math.max(-1, Math.min(1, np.dot(sp)))) * 180 / Math.PI;
+    // 太阳所在经线上的「正东」= 自转切向 ω×r；城市在该侧 = 刚过正午 = 下午
+    const east = new THREE.Vector3().crossVectors(axis, sp).normalize();
+    const sign = np.dot(east) >= 0 ? 1 : -1;
+    return (12 + sign * ang / 15 + 24) % 24;
   }
 
   function updateCities() {
@@ -1321,16 +1334,12 @@ try {
     const sd = uniforms.sunDir.value;
     cityData.forEach(d => {
       if (!d.visible) return;
-      const st = compStatus(sd, d); d._st = st;
+      d.dot.getWorldPosition(_tmpN).normalize();
+      const st = compStatus(sd, _tmpN); d._st = st;
       const de = document.getElementById(`cd-${d.id}`);
       if (de) de.className = `cd ${st}`;
 
-      const iq = new THREE.Quaternion();
-      spinGroup.getWorldQuaternion(iq).invert();
-      const sl = sd.clone().applyQuaternion(iq);
-      const noon = Math.atan2(sl.z, sl.x) * 180 / Math.PI;
-      let diff = ((d.city.lng - noon) % 360 + 540) % 360 - 180;
-      const lh = (12 + diff/15 + 24) % 24;
+      const lh = solarHour(sd, _tmpN);
       const hh = Math.floor(lh), mm = Math.floor((lh-hh)*60);
       const ts = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
       const span = document.getElementById(`cs-${d.id}`);
@@ -1444,9 +1453,13 @@ try {
     this.querySelector('svg').outerHTML = paused ? ICON_PLAY : ICON_PAUSE;
     this.classList.toggle('active', paused);
   });
+  // 转向图标：自西向东＝逆时针，自东向西＝顺时针（两枚独立图标，不用镜像以免误读）
+  const ICON_DIR_CCW = '<svg id="dirIco" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 5 2 11 8 11"/><path d="M4.6 16a8.5 8.5 0 1 0 2-8.8L2 11"/></svg>';
+  const ICON_DIR_CW  = '<svg id="dirIco" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 5 22 11 16 11"/><path d="M19.4 16a8.5 8.5 0 1 1-2-8.8L22 11"/></svg>';
   document.getElementById('dirBtn').addEventListener('click', function() {
     rotDir *= -1;
     this.querySelector('span').textContent = rotDir === 1 ? '自西向东' : '自东向西';
+    document.getElementById('dirIco').outerHTML = rotDir === 1 ? ICON_DIR_CCW : ICON_DIR_CW;
     this.classList.toggle('active', rotDir === -1);
   });
   // 视角锁定开关：锁定 ⇄ 解锁/重置
