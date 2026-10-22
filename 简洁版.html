@@ -8,14 +8,29 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{overflow:hidden;background:#000;font-family:'Microsoft YaHei','PingFang SC',system-ui,-apple-system,sans-serif;color:#fff;user-select:none}
 canvas{display:block}
-#topBar{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);padding:8px 20px;border-radius:14px;border:1px solid rgba(255,255,255,.07);z-index:10;pointer-events:auto}
-#topBar h1{font-size:15px;font-weight:600;white-space:nowrap;background:linear-gradient(90deg,#f9d423,#ff4e50);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:.5px}
-#topBar .cg{display:flex;align-items:center;gap:8px}
-#topBar button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;padding:4px 14px;border-radius:8px;cursor:pointer;font-size:13px;transition:.2s;font-family:inherit;white-space:nowrap}
-#topBar button:hover{background:rgba(255,255,255,.16)}
-#topBar button.active{background:rgba(249,212,35,.22);border-color:#f9d423}
-#topBar .seasBtn{padding:3px 9px;font-size:12px;border-radius:6px}
-#topBar .seasBtn.active{background:rgba(79,195,247,.2);border-color:#4fc3f7;color:#4fc3f7}
+/* 底栏：三胶囊磨砂玻璃（左 四季 / 中 速度·方向·暂停 / 右 南北极+锁定开关） */
+#topBar{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;z-index:10;pointer-events:none}
+#topBar .cap{display:flex;align-items:center;gap:3px;width:max-content;min-height:44px;padding:5px 9px;pointer-events:auto;border-radius:999px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.065);-webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 6px 20px rgba(0,0,0,.26)}
+#topBar .cap.left{justify-self:start}
+#topBar .cap.mid{justify-self:center}
+#topBar .cap.right{justify-self:end}
+#topBar button{font-family:inherit;font-size:13px;line-height:1;color:rgba(255,255,255,.62);background:transparent;border:1px solid transparent;border-radius:999px;padding:8px 12px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;transition:color .18s,background .18s,border-color .18s}
+#topBar button:hover{color:#fff;background:rgba(255,255,255,.09)}
+#topBar button svg{display:block;flex-shrink:0}
+#topBar .lbl{font-size:11.5px;color:rgba(255,255,255,.38);letter-spacing:.1em;padding:0 4px 0 6px;white-space:nowrap}
+#topBar .vsep{width:1px;height:18px;background:rgba(255,255,255,.10);margin:0 4px;flex-shrink:0}
+#topBar .spdBtn{min-width:38px;justify-content:center;font-variant-numeric:tabular-nums}
+#topBar .seasBtn{padding:8px 13px}
+#topBar .pole{font-size:12.5px;padding:7px 10px}
+#topBar .seasBtn.active,#topBar .spdBtn.active,#topBar .pole.active{color:#f9d423;background:rgba(249,212,35,.10);border-color:rgba(249,212,35,.22)}
+#topBar .dirBtn{color:rgba(255,255,255,.55)}
+#topBar #resetBtn{gap:9px;padding:6px 12px 6px 9px;border-color:transparent;color:rgba(255,255,255,.80)}
+#topBar #resetBtn:hover{background:rgba(255,255,255,.06)}
+#topBar .sw-track{position:relative;width:30px;height:16px;border-radius:9px;background:rgba(249,212,35,.22);transition:background .2s;flex-shrink:0}
+#topBar .sw-dot{position:absolute;top:2px;left:16px;width:12px;height:12px;border-radius:50%;background:#ffd84d;box-shadow:0 1px 3px rgba(0,0,0,.38);transition:left .2s,background .2s}
+#topBar #resetBtn.off .sw-track{background:rgba(255,255,255,.16)}
+#topBar #resetBtn.off .sw-dot{left:2px;background:rgba(255,255,255,.60)}
+#topBar .sw-txt{font-size:12.5px}
 #cityPanel{position:fixed;left:16px;bottom:16px;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px 16px;min-width:200px;max-height:75vh;overflow-y:auto;z-index:10;pointer-events:auto}
 #cityPanel .pt{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:8px;letter-spacing:.5px;cursor:pointer}
 #cityPanel .pt:hover{color:rgba(255,255,255,.65)}
@@ -58,15 +73,21 @@ canvas{display:block}
 #errMsg .rb{margin-top:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:8px 24px;border-radius:8px;cursor:pointer;font-size:14px;font-family:inherit;transition:.2s}
 #errMsg .rb:hover{background:rgba(255,255,255,.2)}
 @media(min-width:721px) and (max-width:1440px){
-#topBar{left:200px;transform:none;gap:8px;padding:6px 10px}
-#topBar button{padding:4px 10px}
+#topBar{gap:9px}
+#topBar button{padding:7px 10px;font-size:12.5px}
+#topBar .seasBtn{padding:7px 11px}
 #infoBox{top:16px;left:16px;right:auto;bottom:auto;max-width:none;padding:8px 14px;white-space:nowrap}
 #infoBox .disc{display:none}
+/* 城市面板上移：底栏三胶囊居中后左端会压到面板，往上腾出底栏空间 */
+#cityPanel{top:66px;bottom:auto;max-height:calc(100vh - 150px)}
 }
 @media(max-width:720px){
-#topBar{bottom:12px;padding:6px 12px;gap:8px;flex-wrap:wrap;justify-content:center}
-#topBar h1{font-size:13px}
-#cityPanel{left:8px;bottom:8px;padding:10px 12px;min-width:155px}
+#topBar{bottom:12px;grid-template-columns:auto;justify-items:center;gap:8px;max-width:calc(100vw - 20px)}
+#topBar .cap{padding:4px 7px;min-height:40px}
+#topBar .cap.left,#topBar .cap.mid,#topBar .cap.right{justify-self:center}
+#topBar button{padding:7px 10px;font-size:12.5px}
+#topBar .lbl{display:none}
+#cityPanel{left:8px;top:56px;bottom:auto;padding:10px 12px;min-width:155px;max-height:calc(100vh - 230px)}
 #cityPanel .ci{font-size:12px}
 #infoBox{display:none}
 }
@@ -91,20 +112,31 @@ canvas{display:block}
 </div>
 
 <div id="topBar">
-  <h1>🌍 地球昼夜交替</h1>
-  <div class="cg">
-    <button id="pauseBtn">⏸ 暂停</button>
-  </div>
-  <button id="dirBtn">↺ 自西向东</button>
-  <div class="cg">
+  <div class="cap left">
     <button class="seasBtn" data-seas="chunfen">春分</button>
     <button class="seasBtn" data-seas="xiazhi">夏至</button>
     <button class="seasBtn" data-seas="qiufen">秋分</button>
     <button class="seasBtn" data-seas="dongzhi">冬至</button>
   </div>
-  <button id="npBtn">⬆ 北极</button>
-  <button id="spBtn">⬇ 南极</button>
-  <button id="resetBtn">🔓 解除锁定</button>
+  <div class="cap mid">
+    <span class="lbl">速度</span>
+    <button class="spdBtn active" data-spd="0.1">1x</button>
+    <button class="spdBtn" data-spd="0.5">2x</button>
+    <button class="spdBtn" data-spd="1.5">3x</button>
+    <span class="vsep"></span>
+    <button id="dirBtn" class="dirBtn"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 8a5.4 5.4 0 1 1 1.7 3.9"/><path d="M2.6 4.4V8h3.6"/></svg><span>自西向东</span></button>
+    <span class="vsep"></span>
+    <button id="pauseBtn"><svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><rect x="3.4" y="2.6" width="3" height="10.8" rx="1"/><rect x="9.6" y="2.6" width="3" height="10.8" rx="1"/></svg><span>暂停</span></button>
+  </div>
+  <div class="cap right">
+    <button id="npBtn" class="pole"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12.5V4"/><path d="M4.4 7.4 8 3.8l3.6 3.6"/></svg>北极</button>
+    <button id="spBtn" class="pole"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.5V12"/><path d="M4.4 8.6 8 12.2l3.6-3.6"/></svg>南极</button>
+    <span class="vsep"></span>
+    <button id="resetBtn" title="点击解除锁定，可自由拖动视角">
+      <span class="sw-track"><span class="sw-dot"></span></span>
+      <span class="sw-txt">已锁定</span>
+    </button>
+  </div>
 </div>
 
 <div id="cityPanel">
@@ -1426,15 +1458,28 @@ try {
   animate();
 
   // ── UI ────────────────────────────────────────────────────
-  // 速度固定为 0.1×（speedMul 已固定），不再提供调速控件
+  // 底栏图标（线条 SVG，不用 emoji）
+  const ICON_PAUSE = '<svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><rect x="3.4" y="2.6" width="3" height="10.8" rx="1"/><rect x="9.6" y="2.6" width="3" height="10.8" rx="1"/></svg>';
+  const ICON_PLAY  = '<svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M4.6 2.6v10.8L14 8z"/></svg>';
+
+  // 速度档位：1x = 0.1 转速（原速度）、2x = 0.5 转速、3x = 1.5 转速
+  document.querySelectorAll('.spdBtn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      speedMul = parseFloat(this.dataset.spd) || 0.1;
+      document.querySelectorAll('.spdBtn').forEach(function(b) {
+        b.classList.toggle('active', b === btn);
+      });
+    });
+  });
   document.getElementById('pauseBtn').addEventListener('click', function() {
     paused = !paused;
-    this.textContent = paused ? '▶ 播放' : '⏸ 暂停';
+    this.querySelector('span').textContent = paused ? '播放' : '暂停';
+    this.querySelector('svg').outerHTML = paused ? ICON_PLAY : ICON_PAUSE;
     this.classList.toggle('active', paused);
   });
   document.getElementById('dirBtn').addEventListener('click', function() {
     rotDir *= -1;
-    this.textContent = rotDir === 1 ? '↺ 自西向东' : '↻ 自东向西';
+    this.querySelector('span').textContent = rotDir === 1 ? '自西向东' : '自东向西';
     this.classList.toggle('active', rotDir === -1);
   });
   // 视角锁定开关：锁定 ⇄ 解锁/重置
@@ -1449,10 +1494,11 @@ try {
       spinGroup.rotation.y = 2.618;
       document.querySelectorAll('.ci').forEach(el => el.style.background = '');
       document.querySelectorAll('#npBtn,#spBtn').forEach(el => el.classList.remove('active'));
-      resetBtn.textContent = '🔓 解除锁定';
-    } else {
-      resetBtn.textContent = '⟲ 重置视角';
     }
+    // 开关状态：锁定=金色在右、已锁定；解锁=灰点返左、已解锁
+    resetBtn.classList.toggle('off', !viewLocked);
+    resetBtn.querySelector('.sw-txt').textContent = viewLocked ? '已锁定' : '已解锁';
+    resetBtn.title = viewLocked ? '点击解除锁定，可自由拖动视角' : '点击重新锁定并复位视角';
   });
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
